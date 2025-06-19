@@ -1,13 +1,18 @@
 import { MockTransporter } from "../__mocks__/mockTransporter";
-import { NodemailerConfig, SesClientConfig, SesNotificationService } from "../providers/ses/adapter";
+import { NodemailerConfig, SesClientConfig, SesNotificationService, SesNotificationServiceConfig } from "../providers/ses/adapter";
 
-export const testService = (transporter: MockTransporter, nodemailerConfig?: NodemailerConfig, sesClientConfig?: SesClientConfig) => new SesNotificationService(
+export const testService = (
+    transporter: MockTransporter, 
+    nodemailerConfig?: NodemailerConfig, 
+    configOverrides?: Partial<SesNotificationServiceConfig>
+) => new SesNotificationService(
     {
         logger: console as any,
     },
     {
         nodemailerConfig,
-        sesClientConfig,
+        sesClientConfig: configOverrides?.sesClientConfig,
+        templatesConfig: configOverrides?.templatesConfig,
     },
     undefined,
     transporter as any,

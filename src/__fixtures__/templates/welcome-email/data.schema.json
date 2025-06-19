@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "companyName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hasPromo": {
+      "type": "boolean"
+    },
+    "promoCode": {
+      "type": "string"
+    }
+  },
+  "required": ["firstName", "email", "companyName"],
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "hasPromo": { "const": true }
+    }
+  },
+  "then": {
+    "required": ["promoCode"]
+  }
+}

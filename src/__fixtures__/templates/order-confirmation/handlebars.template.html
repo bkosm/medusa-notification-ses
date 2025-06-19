@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Order Confirmation #{{orderNumber}}</title>
+</head>
+<body>
+    <h1>Order Confirmation</h1>
+    <p>Hi {{customerName}},</p>
+    <p>Thank you for your order! Your order #{{orderNumber}} has been confirmed.</p>
+    
+    <h2>Order Details:</h2>
+    <ul>
+    {{#each items}}
+        <li>{{name}} - Quantity: {{quantity}} - ${{price}}</li>
+    {{/each}}
+    </ul>
+    
+    <p><strong>Total: ${{total}}</strong></p>
+    <p>Estimated delivery: {{deliveryDate}}</p>
+    
+    <p>Thanks for shopping with us!</p>
+</body>
+</html>

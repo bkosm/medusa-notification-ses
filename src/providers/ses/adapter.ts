@@ -14,6 +14,8 @@ import type { Transporter, SendMailOptions } from "nodemailer"
 import type { Address, Attachment as NodemailerAttachment } from "nodemailer/lib/mailer"
 import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
 
+import { TemplateManager, TemplatesConfig } from "./templates"
+
 type InjectedDependencies = {
     logger: Logger
 }
@@ -31,6 +33,7 @@ export type SesClientConfig = CheckOptionalClientConfig<SESClientConfig>
 export type SesNotificationServiceConfig = {
     sesClientConfig?: SesClientConfig
     nodemailerConfig?: NodemailerConfig
+    templatesConfig?: TemplatesConfig
 }
 
 export class SesNotificationService extends AbstractNotificationProviderService {
@@ -39,6 +42,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
     protected config_: SesNotificationServiceConfig
     protected logger_: Logger
     protected transporter_: Transporter<SentMessageInfo>
+    protected templateManager_: TemplateManager | null
 
     constructor(
         { logger }: InjectedDependencies,
@@ -52,6 +56,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         this.config_ = options
         this.logger_ = logger
         this.transporter_ = transporter
+        this.templateManager_ = TemplateManager.create(options.templatesConfig)
     }
 
     async send(
@@ -78,11 +83,27 @@ export class SesNotificationService extends AbstractNotificationProviderService 
             )
         }
 
-        const {
+        let {
             subject,
             text,
             html,
         } = notification.content
+
+
+        const { template: templateId, data } = notification
+
+        if (this.templateManager_ && templateId !== "") {
+            if (!this.templateManager_.hasTemplate(templateId)) {
+                throw error('INVALID_ARGUMENT', `Template '${templateId}' not found`)
+            }
+
+            try {
+                html = this.templateManager_.renderTemplate(templateId, data)
+            } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : 'unknown'
+                throw error('UNEXPECTED_STATE', `Template rendering failed: ${message}`)
+            }
+        }
 
         const staticOptions = this.config_.nodemailerConfig
 
@@ -106,7 +127,6 @@ export class SesNotificationService extends AbstractNotificationProviderService 
 
         try {
             const response = await this.transporter_.sendMail(mailOptions)
-            console.log({ response })
             return { id: response.messageId }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : 'unknown'

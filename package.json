@@ -37,12 +37,15 @@
     "typescript": "^5.8.3"
   },
   "peerDependencies": {
-    "@aws-sdk/client-ses": "^3.821.0",
-    "@medusajs/framework": "^2.8.3",
-    "nodemailer": "^6.9.12"
+    "@medusajs/framework": "^2.8.3"
   },
   "keywords": [
     "medusa-provider",
     "medusa-provider-ses"
-  ]
+  ],
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "handlebars": "^4.7.8"
+  }
 }

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Welcome to {{companyName}}</title>
+</head>
+<body>
+    <h1>Welcome {{firstName}}!</h1>
+    <p>Thank you for joining {{companyName}}. We're excited to have you on board.</p>
+    <p>Your email address is: {{email}}</p>
+    {{#if hasPromo}}
+    <p>Use promo code <strong>{{promoCode}}</strong> for 20% off your first order!</p>
+    {{/if}}
+    <p>Best regards,<br>The {{companyName}} Team</p>
+</body>
+</html>

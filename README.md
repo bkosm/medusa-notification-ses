@@ -32,6 +32,9 @@ export default defineConfig({
           from: "noreply@yourdomain.com",
           replyTo: "support@yourdomain.com",
         },
+        templatesConfig: {
+          directory: "./email-templates",
+        },
       },
     },
   ],
@@ -41,6 +44,7 @@ export default defineConfig({
 ## Features
 
 - **AWS SES Integration**: Uses SES v2 API with `SendRawEmail` for attachment support
+- **Email Templates**: Optional Handlebars templating with JSON schema validation
 - **Static Configuration**: Set default `from`, `replyTo`, `cc`, `bcc` addresses and other nodemailer options
 - **Address Merging**: Combines static addresses with notification-specific addresses
 - **Flexible Address Formats**: Supports strings, Address objects, and arrays
@@ -48,7 +52,9 @@ export default defineConfig({
 
 ## Usage
 
-After registering the provider, use Medusa's notification module to create and send emails:
+### Basic Email Sending
+
+Use Medusa's notification module to send emails with raw HTML:
 
 ```typescript
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
@@ -79,6 +85,141 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 }
 ```
 
+### Template-Based Email Sending
+
+Send emails using pre-defined templates with dynamic data:
+
+```typescript
+await notificationService.createNotifications({
+  to: "customer@example.com",
+  channel: "email",
+  template: "order-confirmation",
+  data: {
+    customerName: "John Doe",
+    orderNumber: "ORD-123",
+    items: [
+      { name: "Product A", quantity: 2, price: 29.99 },
+      { name: "Product B", quantity: 1, price: 15.50 }
+    ],
+    total: 75.48,
+    deliveryDate: "2024-01-15"
+  },
+  content: {
+    subject: "Order Confirmation #ORD-123"
+  }
+})
+```
+
+## Email Templates
+
+### Template Setup
+
+The template system uses a directory-based structure where each template ID maps to a folder containing:
+
+1. **`handlebars.template.html`** - Pre-compiled MJML template with Handlebars placeholders
+2. **`data.schema.json`** - JSON schema for validating template data
+
+### Directory Structure
+
+```
+email-templates/
+├── welcome-email/
+│   ├── handlebars.template.html
+│   └── data.schema.json
+├── order-confirmation/
+│   ├── handlebars.template.html
+│   └── data.schema.json
+└── password-reset/
+    ├── handlebars.template.html
+    └── data.schema.json
+```
+
+### Example Template
+
+**`email-templates/welcome-email/handlebars.template.html`**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Welcome to {{companyName}}</title>
+</head>
+<body>
+    <h1>Welcome {{firstName}}!</h1>
+    <p>Thank you for joining {{companyName}}. We're excited to have you on board.</p>
+    <p>Your email address is: {{email}}</p>
+    {{#if hasPromo}}
+    <p>Use promo code <strong>{{promoCode}}</strong> for 20% off your first order!</p>
+    {{/if}}
+    <p>Best regards,<br>The {{companyName}} Team</p>
+</body>
+</html>
+```
+
+**`email-templates/welcome-email/data.schema.json`**
+```json
+{
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "companyName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hasPromo": {
+      "type": "boolean"
+    },
+    "promoCode": {
+      "type": "string"
+    }
+  },
+  "required": ["firstName", "email", "companyName"],
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "hasPromo": { "const": true }
+    }
+  },
+  "then": {
+    "required": ["promoCode"]
+  }
+}
+```
+
+### Template Best Practices
+
+1. **Pre-compile MJML**: Compile MJML to HTML at build time for better performance
+2. **Validate Data**: Use comprehensive JSON schemas to catch data errors early
+3. **Use Handlebars Helpers**: Leverage built-in helpers like `{{#if}}`, `{{#each}}` for dynamic content
+4. **Conditional Logic**: Use JSON schema conditional validation for complex data requirements
+5. **Fallback Content**: Always provide fallback text content in case HTML rendering fails
+6. **Template Naming**: Use descriptive, kebab-case names for template IDs
+
+### Build Process Integration
+
+```bash
+# Example build script to compile MJML templates
+mjml email-templates-src/welcome-email/template.mjml -o email-templates/welcome-email/handlebars.template.html
+mjml email-templates-src/order-confirmation/template.mjml -o email-templates/order-confirmation/handlebars.template.html
+```
+
+### Template Processing Flow
+
+1. **Startup**: Templates are loaded and validated when the service initializes
+2. **Runtime**: When sending emails with templates:
+   - Template ID is validated against available templates
+   - Data is validated against the template's JSON schema
+   - Handlebars template is rendered with provided data
+   - Rendered HTML replaces the notification's HTML content
+3. **Caching**: Templates are cached in memory for optimal performance
+
 ## Configuration Options
 
 ### `sesClientConfig`
@@ -94,6 +235,10 @@ Static nodemailer options (optional):
 - `cc`, `bcc` - Default carbon copy addresses
 - `attachments` - Static attachments
 - Other `SendMailOptions` (excluding `subject`, `text`, `html`)
+
+### `templatesConfig`
+Email template configuration (optional):
+- `directory` - Path to directory containing template folders
 
 ## License
 
