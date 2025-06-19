@@ -5,8 +5,7 @@ import {
 import {
     AbstractNotificationProviderService,
 } from "@medusajs/framework/utils"
-
-import { SESClient, SESClientConfig } from "@aws-sdk/client-ses"
+import { SESClient, SESClientConfig, SendRawEmailCommand } from "@aws-sdk/client-ses"
 import { CheckOptionalClientConfig } from "@smithy/types"
 import * as nodemailer from "nodemailer"
 import type { Transporter, SendMailOptions } from "nodemailer"
@@ -50,9 +49,9 @@ export class SesNotificationService extends AbstractNotificationProviderService 
     constructor(
         { logger }: InjectedDependencies,
         options: SesNotificationServiceConfig,
-        sesClient: SESClient = new SESClient(options?.sesClientConfig ?? {}),
+        sesClient: SESClient = new SESClient(...options?.sesClientConfig ?? []),
         transporter: Transporter<SentMessageInfo> = nodemailer.createTransport({
-            SES: { ses: sesClient }
+            SES: { ses: sesClient, aws: { SendRawEmailCommand } }
         })
     ) {
         super()
@@ -116,12 +115,14 @@ export class SesNotificationService extends AbstractNotificationProviderService 
             filename: at.filename,
             content: at.content,
             contentType: at.content_type,
+            encoding: 'base64',
             contentDisposition: (at.disposition as NodemailerAttachment['contentDisposition']),
         })) ?? []
 
         let mailOptions: SendMailOptions = {
             ...(staticOptions ?? {}),
-            from: notification.from ?? undefined,
+            // notification.from is permanently undefined in Medusa v2
+            from: notification.from ?? staticOptions?.from,
             to: addressesToArray([staticOptions?.to, notification.to]),
             subject,
             text,
@@ -133,7 +134,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         if (this.sandboxManager_) {
             await this.sandboxManager_.checkAndVerifyAddresses([
                 mailOptions.to,
-                mailOptions.cc, 
+                mailOptions.cc,
                 mailOptions.bcc
             ])
         }

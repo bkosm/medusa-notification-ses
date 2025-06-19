@@ -1,7 +1,7 @@
-import { describe, expect, it, jest } from '@jest/globals'
+import { describe, expect, it, jest, beforeEach } from '@jest/globals'
 import { testService } from "../../src/__fixtures__/testService"
 import { newMockTransporter } from "../../src/__mocks__/mockTransporter"
-import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand } from '@aws-sdk/client-ses'
+import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand, VerifyEmailIdentityCommandInput, GetIdentityVerificationAttributesCommandInput } from '@aws-sdk/client-ses'
 import { mockClient } from 'aws-sdk-client-mock'
 import { MedusaError } from '@medusajs/framework/utils'
 
@@ -57,7 +57,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-message-id' })
-        
+
         const service = testService(transporter, {
             from: "source@e.g",
         })
@@ -78,6 +78,7 @@ describe("SES notification provider", () => {
                     content: "test content",
                     contentType: "text/plain",
                     contentDisposition: undefined,
+                    encoding: 'base64'
                 },
             ],
         })
@@ -102,7 +103,7 @@ describe("SES notification provider", () => {
         expect(result.id).toEqual('test-message-id')
         expect(transporter.sendMail).toHaveBeenCalledWith(
             expect.objectContaining({
-                from: undefined,
+                from: "source@e.g",
                 to: ["someone@e.xt"],
             })
         )
@@ -126,7 +127,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             to: ["static1@example.com", "static2@example.com"]
@@ -146,7 +147,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             cc: ["cc1@example.com", "cc2@example.com"]
@@ -166,7 +167,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             bcc: "bcc@example.com"
@@ -186,7 +187,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             replyTo: "noreply@example.com"
@@ -206,7 +207,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             attachments: [
@@ -234,6 +235,7 @@ describe("SES notification provider", () => {
                         content: "test content",
                         contentType: "text/plain",
                         contentDisposition: undefined,
+                        encoding: 'base64'
                     }
                 ]
             })
@@ -245,7 +247,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             to: [
@@ -268,7 +270,7 @@ describe("SES notification provider", () => {
         const transporter = newMockTransporter()
 
         transporter.sendMailReturns({ messageId: 'test-id' })
-        
+
         const service = testService(transporter, {
             from: "static@example.com",
             priority: "high",
@@ -353,7 +355,7 @@ describe("SES notification provider", () => {
 
             await expect(service.send(notification)).rejects.toThrow(MedusaError)
             expect(transporter.sendMail).not.toHaveBeenCalled()
-            
+
             // Should check verification status and start verification
             const calls = sesMock.calls()
             expect(calls).toHaveLength(2)
@@ -388,7 +390,7 @@ describe("SES notification provider", () => {
             await service.send(notification)
 
             const calls = sesMock.calls()
-            expect(calls[0].args[0].input.Identities).toContain('someone@e.xt')
+            expect((calls[0].args[0].input as GetIdentityVerificationAttributesCommandInput).Identities).toContain('someone@e.xt')
         })
 
         it("should handle mixed verified and unverified addresses", async () => {
@@ -418,11 +420,11 @@ describe("SES notification provider", () => {
             )
 
             // Should only verify the unverified address
-            const verifyCalls = sesMock.calls().filter(call => 
+            const verifyCalls = sesMock.calls().filter(call =>
                 call.args[0].constructor.name === 'VerifyEmailIdentityCommand'
             )
             expect(verifyCalls).toHaveLength(1)
-            expect(verifyCalls[0].args[0].input.EmailAddress).toBe('someone@e.xt')
+            expect((verifyCalls[0].args[0].input as VerifyEmailIdentityCommandInput).EmailAddress).toBe('someone@e.xt')
         })
 
         it("should handle SES API errors gracefully", async () => {

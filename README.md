@@ -18,31 +18,41 @@ import { Modules } from "@medusajs/framework/utils"
 export default defineConfig({
   modules: [
     {
-      resolve: "@bkosm/medusa-notification-ses",
-      key: Modules.NOTIFICATION,
+      resolve: "@medusajs/medusa/notification",
       options: {
-        sesClientConfig: {
-          region: "us-east-1",
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        providers: [
+          {
+            resolve: "@bkosm/medusa-notification-ses",
+            id: "notification-ses",
+            options: {
+              channels: ["email"],
+              sesClientConfig: {
+                region: "us-east-1",
+                credentials: {
+                  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                },
+              },
+              nodemailerConfig: {
+                from: "noreply@yourdomain.com",
+                replyTo: "support@yourdomain.com",
+              },
+              templatesConfig: {
+                directory: "./email-templates",
+              },
+              sandboxConfig: {
+                // Enables SES sandbox mode with automatic email verification
+              },
+            }
           },
-        },
-        nodemailerConfig: {
-          from: "noreply@yourdomain.com",
-          replyTo: "support@yourdomain.com",
-        },
-        templatesConfig: {
-          directory: "./email-templates",
-        },
-        sandboxConfig: {
-          // Enables SES sandbox mode with automatic email verification
-        },
+        ],
       },
     },
-  ],
+  ]
 })
 ```
+
+See the [example Medusa app](./examples/app/medusa-config.ts) for more details.
 
 ## SES Sandbox Mode
 
@@ -50,24 +60,7 @@ When using AWS SES in sandbox mode (common in development/staging environments),
 
 ### Configuration
 
-Enable sandbox mode by adding the `sandboxConfig` option:
-
-```typescript
-export default defineConfig({
-  modules: [
-    {
-      resolve: "@bkosm/medusa-notification-ses",
-      key: Modules.NOTIFICATION,
-      options: {
-        // ... other config
-        sandboxConfig: {
-          // Presence of this object enables sandbox mode
-        },
-      },
-    },
-  ],
-})
-```
+Enable sandbox mode by adding the `sandboxConfig` option.
 
 ### How Sandbox Mode Works
 
