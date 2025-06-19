@@ -51,6 +51,16 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         { logger }: InjectedDependencies,
         options: SesNotificationServiceConfig,
         sesClient: SESClient = new SESClient(options?.sesClientConfig ?? {}),
+        /*
+                TypeError: ses.sendRawEmail is not a function
+            at /Users/bkosm/Repos/medusa-notification-ses/node_modules/nodemailer/lib/ses-transport/index.js:267:43
+            at getRegion (/Users/bkosm/Repos/medusa-notification-ses/node_modules/nodemailer/lib/ses-transport/index.js:253:28)
+            at /Users/bkosm/Repos/medusa-notification-ses/node_modules/nodemailer/lib/ses-transport/index.js:256:17
+            at LeWindows.<anonymous> (/Users/bkosm/Repos/medusa-notification-ses/node_modules/nodemailer/lib/ses-transport/index.js:209:38)
+            at Object.onceWrapper (node:events:632:28)
+            at LeWindows.emit (node:events:518:28)
+            at LeWindows.emit (node:domain:489:12)
+        */
         transporter: Transporter<SentMessageInfo> = nodemailer.createTransport({
             SES: { ses: sesClient }
         })
@@ -72,6 +82,8 @@ export class SesNotificationService extends AbstractNotificationProviderService 
                 `Notification is not defined`
             )
         }
+
+        //new SESClient({}).sendRawEmail
 
         if (notification.channel !== 'email') {
             throw error(

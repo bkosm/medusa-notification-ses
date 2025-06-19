@@ -1,0 +1,4 @@
+export AWS_ACCESS_KEY_ID="ASIAV..."
+export AWS_SECRET_ACCESS_KEY="Mmj/t..."
+export AWS_SESSION_TOKEN="IQoJ.."
+export AWS_REGION="eu-central-1"

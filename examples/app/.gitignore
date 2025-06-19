@@ -1,6 +1,6 @@
 /dist
 .env
-.DS_Store
+**/.DS_Store
 /uploads
 /node_modules
 yarn-error.log
@@ -16,6 +16,7 @@ coverage
 medusa-db.sql
 build
 .cache
+.envrc
 
 .yarn/*
 !.yarn/patches
