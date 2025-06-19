@@ -4,7 +4,6 @@ import {
 } from "@medusajs/framework/types"
 import {
     AbstractNotificationProviderService,
-    MedusaError,
 } from "@medusajs/framework/utils"
 
 import { SESClient, SESClientConfig } from "@aws-sdk/client-ses"
@@ -15,6 +14,8 @@ import type { Address, Attachment as NodemailerAttachment } from "nodemailer/lib
 import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
 
 import { TemplateManager, TemplatesConfig } from "./templates"
+import { SandboxManager, SandboxConfig } from "./sandbox"
+import { error } from "./utils"
 
 type InjectedDependencies = {
     logger: Logger
@@ -34,6 +35,7 @@ export type SesNotificationServiceConfig = {
     sesClientConfig?: SesClientConfig
     nodemailerConfig?: NodemailerConfig
     templatesConfig?: TemplatesConfig
+    sandboxConfig?: SandboxConfig
 }
 
 export class SesNotificationService extends AbstractNotificationProviderService {
@@ -43,6 +45,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
     protected logger_: Logger
     protected transporter_: Transporter<SentMessageInfo>
     protected templateManager_: TemplateManager | null
+    protected sandboxManager_: SandboxManager | null
 
     constructor(
         { logger }: InjectedDependencies,
@@ -57,6 +60,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         this.logger_ = logger
         this.transporter_ = transporter
         this.templateManager_ = TemplateManager.create(options.templatesConfig)
+        this.sandboxManager_ = SandboxManager.create(options.sandboxConfig, sesClient)
     }
 
     async send(
@@ -125,6 +129,15 @@ export class SesNotificationService extends AbstractNotificationProviderService 
             attachments: [...(staticOptions?.attachments ?? []), ...dynamicAttachments],
         }
 
+        // Sandbox verification check - only verify recipient addresses
+        if (this.sandboxManager_) {
+            await this.sandboxManager_.checkAndVerifyAddresses([
+                mailOptions.to,
+                mailOptions.cc, 
+                mailOptions.bcc
+            ])
+        }
+
         try {
             const response = await this.transporter_.sendMail(mailOptions)
             return { id: response.messageId }
@@ -159,9 +172,3 @@ function addressToArray(addressLike: AddressLike): string[] {
     return [addressLike.address]
 }
 
-const error = (type: keyof typeof MedusaError.bTypes, message: string) => {
-    return new MedusaError(
-        type,
-        `SesNotificationService: ${message}`
-    )
-}

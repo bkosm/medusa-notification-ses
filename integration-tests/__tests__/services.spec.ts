@@ -1,8 +1,17 @@
 import { describe, expect, it, jest } from '@jest/globals'
 import { testService } from "../../src/__fixtures__/testService"
 import { newMockTransporter } from "../../src/__mocks__/mockTransporter"
+import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand } from '@aws-sdk/client-ses'
+import { mockClient } from 'aws-sdk-client-mock'
+import { MedusaError } from '@medusajs/framework/utils'
+
+const sesMock = mockClient(SESClient)
 
 jest.setTimeout(10_000)
+
+beforeEach(() => {
+    sesMock.reset()
+})
 
 const testNotification = () => ({
     to: "someone@e.xt",
@@ -278,5 +287,162 @@ describe("SES notification provider", () => {
                 }
             })
         )
+    })
+
+    describe("Sandbox Mode", () => {
+        it("should send email normally when sandbox is disabled", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            transporter.sendMailReturns({ messageId: 'test-message-id' })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, undefined, sesClient)
+
+            const result = await service.send(notification)
+
+            expect(result.id).toEqual('test-message-id')
+            expect(transporter.sendMail).toHaveBeenCalled()
+            expect(sesMock.calls()).toHaveLength(0) // No SES verification calls
+        })
+
+        it("should verify addresses and send when all are verified", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            transporter.sendMailReturns({ messageId: 'test-message-id' })
+            sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+                VerificationAttributes: {
+                    'someone@e.xt': { VerificationStatus: 'Success' }
+                }
+            })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: {}
+            }, sesClient)
+
+            const result = await service.send(notification)
+
+            expect(result.id).toEqual('test-message-id')
+            expect(transporter.sendMail).toHaveBeenCalled()
+            expect(sesMock.calls()).toHaveLength(1)
+        })
+
+        it("should throw retryable error when addresses are unverified", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+                VerificationAttributes: {
+                    'someone@e.xt': { VerificationStatus: 'Pending' }
+                }
+            })
+            sesMock.on(VerifyEmailIdentityCommand).resolves({})
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: {}
+            }, sesClient)
+
+            await expect(service.send(notification)).rejects.toThrow(MedusaError)
+            expect(transporter.sendMail).not.toHaveBeenCalled()
+            
+            // Should check verification status and start verification
+            const calls = sesMock.calls()
+            expect(calls).toHaveLength(2)
+            expect(calls[0].args[0].constructor.name).toBe('GetIdentityVerificationAttributesCommand')
+            expect(calls[1].args[0].constructor.name).toBe('VerifyEmailIdentityCommand')
+        })
+
+        it("should verify all recipient addresses (to, cc, bcc)", async () => {
+            const notification = {
+                ...testNotification(),
+                cc: "cc@example.com",
+                bcc: "bcc@example.com"
+            }
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            transporter.sendMailReturns({ messageId: 'test-message-id' })
+            sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+                VerificationAttributes: {
+                    'someone@e.xt': { VerificationStatus: 'Success' },
+                    'cc@example.com': { VerificationStatus: 'Success' },
+                    'bcc@example.com': { VerificationStatus: 'Success' }
+                }
+            })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: {}
+            }, sesClient)
+
+            await service.send(notification)
+
+            const calls = sesMock.calls()
+            expect(calls[0].args[0].input.Identities).toContain('someone@e.xt')
+        })
+
+        it("should handle mixed verified and unverified addresses", async () => {
+            const notification = {
+                ...testNotification(),
+                cc: "verified@example.com"
+            }
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+                VerificationAttributes: {
+                    'someone@e.xt': { VerificationStatus: 'Pending' },
+                    'verified@example.com': { VerificationStatus: 'Success' }
+                }
+            })
+            sesMock.on(VerifyEmailIdentityCommand).resolves({})
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: {}
+            }, sesClient)
+
+            await expect(service.send(notification)).rejects.toThrow(
+                'Email verification pending for sandbox mode: someone@e.xt'
+            )
+
+            // Should only verify the unverified address
+            const verifyCalls = sesMock.calls().filter(call => 
+                call.args[0].constructor.name === 'VerifyEmailIdentityCommand'
+            )
+            expect(verifyCalls).toHaveLength(1)
+            expect(verifyCalls[0].args[0].input.EmailAddress).toBe('someone@e.xt')
+        })
+
+        it("should handle SES API errors gracefully", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            sesMock.on(GetIdentityVerificationAttributesCommand).rejects(
+                new Error('SES API Error')
+            )
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: {}
+            }, sesClient)
+
+            await expect(service.send(notification)).rejects.toThrow(
+                'Failed to check email verification status'
+            )
+        })
     })
 })
