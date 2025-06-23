@@ -1,5 +1,7 @@
 # Medusa Provider - Notification SES
 
+> This project is still WIP. Stable and tested release will go in a major version.
+
 Send emails from your Medusa application through AWS Simple Email Service using nodemailer transport.
 
 ## Installation
@@ -13,8 +15,6 @@ npm install @bkosm/medusa-notification-ses
 Register the provider in your Medusa project:
 
 ```typescript
-import { Modules } from "@medusajs/framework/utils"
-
 export default defineConfig({
   modules: [
     {
@@ -26,23 +26,14 @@ export default defineConfig({
             id: "notification-ses",
             options: {
               channels: ["email"],
-              sesClientConfig: {
-                region: "us-east-1",
-                credentials: {
-                  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                },
-              },
               nodemailerConfig: {
                 from: "noreply@yourdomain.com",
-                replyTo: "support@yourdomain.com",
               },
               templatesConfig: {
                 directory: "./email-templates",
               },
-              sandboxConfig: {
-                // Enables SES sandbox mode with automatic email verification
-              },
+              // Enables SES sandbox mode with automatic email verification
+              sandboxConfig: {},
             }
           },
         ],
@@ -76,6 +67,7 @@ The sandbox mode is designed to work with Medusa's workflow retry system. When a
 
 ```typescript
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
+import { Modules } from "@medusajs/framework/utils"
 
 // Define the workflow for order confirmation emails
 const sendOrderConfirmationWorkflow = createWorkflow(
@@ -131,27 +123,6 @@ export const config: SubscriberConfig = {
 }
 ```
 
-### Workflow Retry Mechanics
-
-Medusa's workflow system provides robust retry capabilities that integrate perfectly with SES sandbox verification:
-
-- **Automatic Retries**: Failed steps are automatically retried based on `maxRetries` configuration
-- **Long-Running Workflows**: Setting `retryInterval` makes workflows run asynchronously in the background
-- **Error Classification**: The provider uses `MedusaError.Types.INVALID_DATA` to signal retryable verification errors
-- **Graceful Degradation**: Workflows can continue with other operations while email verification is pending
-- **State Management**: Workflow state is persisted, allowing long-running verification processes
-
-## Features
-
-- **AWS SES Integration**: Uses SES v2 API with `SendRawEmail` for attachment support
-- **Email Templates**: Optional Handlebars templating with JSON schema validation
-- **SES Sandbox Mode**: Automatic email address verification for sandbox environments
-- **Workflow Integration**: Seamless integration with Medusa's retry mechanisms
-- **Static Configuration**: Set default `from`, `replyTo`, `cc`, `bcc` addresses and other nodemailer options
-- **Address Merging**: Combines static addresses with notification-specific addresses
-- **Flexible Address Formats**: Supports strings, Address objects, and arrays
-- **Attachment Support**: Handles file attachments through nodemailer
-
 ## Usage
 
 ### Basic Email Sending
@@ -178,7 +149,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     },
     attachments: [{
       filename: "receipt.pdf",
-      content: pdfBuffer,
+      content: pdfBufferBase64String,
       content_type: "application/pdf",
     }],
   })
@@ -304,14 +275,6 @@ email-templates/
 5. **Fallback Content**: Always provide fallback text content in case HTML rendering fails
 6. **Template Naming**: Use descriptive, kebab-case names for template IDs
 
-### Build Process Integration
-
-```bash
-# Example build script to compile MJML templates
-mjml email-templates-src/welcome-email/template.mjml -o email-templates/welcome-email/handlebars.template.html
-mjml email-templates-src/order-confirmation/template.mjml -o email-templates/order-confirmation/handlebars.template.html
-```
-
 ### Template Processing Flow
 
 1. **Startup**: Templates are loaded and validated when the service initializes
@@ -346,8 +309,4 @@ Email template configuration (optional):
 SES sandbox mode configuration (optional):
 - When present (even as empty object), enables sandbox mode with automatic email verification
 - Only include in development/staging environments
-- Automatically handles recipient address verification and integrates with Medusa workflow retries
-
-## License
-
-MIT
+- Automatically handles recipient address verification
