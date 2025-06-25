@@ -6,6 +6,9 @@ ci:
     npm run test:integration
     npm run build
 
+build:
+    npm run build
+
 release *args:
     npm run build
     CI=true npm run semantic-release {{ args }}

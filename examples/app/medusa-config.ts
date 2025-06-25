@@ -1,4 +1,4 @@
-import { loadEnv, defineConfig, Modules } from '@medusajs/framework/utils'
+import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -25,6 +25,9 @@ module.exports = defineConfig({
               channels: ["email"],
               nodemailerConfig: {
                 from: 'no-reply@commerce.itnsh.it'
+              },
+              templatesConfig: {
+                directory: `${__dirname}/src/emails`,
               },
               sandboxConfig: {},
             }

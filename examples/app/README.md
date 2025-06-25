@@ -30,3 +30,13 @@ export AWS_ACCESS_KEY_ID="ASIAV..."
 export AWS_SECRET_ACCESS_KEY="nejJi80p..."
 export AWS_SESSION_TOKEN="IQoJb3JpZ2l..."
 ```
+
+## Flow showcase
+
+### Customer updated
+
+Whenever a customer is updated, a raw text email is sent with a csv file attachment. Sends the email to the customer directly.
+
+### Product updated
+
+Whenever a product is updated, a templated email is sent. Requires `ADMIN_EMAIL` env to be set to determine who to send the email to.
