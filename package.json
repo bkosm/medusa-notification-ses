@@ -1,6 +1,6 @@
 {
   "name": "@bkosm/medusa-notification-ses",
-  "version": "0.2.3",
+  "version": "1.0.0",
   "description": "AWS SES notification provider for Medusa",
   "main": "dist/index.js",
   "repository": {
