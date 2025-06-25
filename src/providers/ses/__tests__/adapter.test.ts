@@ -12,6 +12,7 @@ describe("SesNotificationService", () => {
             transporter.sendMailReturns({ messageId: 'test-id' })
 
             const service = testService(transporter, {
+                from: '',
                 to: [
                     "string@example.com",
                     { name: "Object User", address: "object@example.com" }
@@ -67,7 +68,9 @@ describe("SesNotificationService", () => {
             const transporter = newMockTransporter()
             transporter.sendMailReturns({ messageId: 'test-id' })
 
-            const service = testService(transporter, {}, {
+            const service = testService(transporter, {
+                from: '',
+            }, {
                 templatesConfig: {
                     directory: FIXTURES_DIR
                 }
@@ -123,7 +126,9 @@ describe("SesNotificationService", () => {
 
         it("should throw error for non-existent template", async () => {
             const transporter = newMockTransporter()
-            const service = testService(transporter, {}, {
+            const service = testService(transporter, {
+                from: '',
+            }, {
                 templatesConfig: {
                     directory: FIXTURES_DIR
                 }
@@ -142,7 +147,9 @@ describe("SesNotificationService", () => {
 
         it("should throw error for invalid template data", async () => {
             const transporter = newMockTransporter()
-            const service = testService(transporter, {}, {
+            const service = testService(transporter, {
+                from: '',
+            }, {
                 templatesConfig: {
                     directory: FIXTURES_DIR
                 }
@@ -166,7 +173,9 @@ describe("SesNotificationService", () => {
             const transporter = newMockTransporter()
             transporter.sendMailReturns({ messageId: 'test-id' })
 
-            const service = testService(transporter, {}, {
+            const service = testService(transporter, {
+                from: '',
+            }, {
                 templatesConfig: {
                     directory: FIXTURES_DIR
                 }

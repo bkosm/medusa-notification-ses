@@ -26,13 +26,15 @@ export type NodemailerConfig = SafeOmit<SendMailOptions,
     | 'subject'
     | 'text'
     | 'html'
->
+> & {
+    from: string
+}
 
 export type SesClientConfig = CheckOptionalClientConfig<SESClientConfig>
 
 export type SesNotificationServiceConfig = {
+    nodemailerConfig: NodemailerConfig
     sesClientConfig?: SesClientConfig
-    nodemailerConfig?: NodemailerConfig
     templatesConfig?: TemplatesConfig
     sandboxConfig?: SandboxConfig
 }
