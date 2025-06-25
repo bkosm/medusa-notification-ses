@@ -22,7 +22,6 @@
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
   },
   "dependencies": {
-    "@bkosm/medusa-notification-ses": "0.2.4",
     "@medusajs/admin-sdk": "2.8.4",
     "@medusajs/cli": "2.8.4",
     "@medusajs/framework": "2.8.4",

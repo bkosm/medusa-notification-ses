@@ -2,6 +2,24 @@
 
 Created with the `npx create-medusa-app` wizard.
 
+## Package resolution
+
+This example resolves the Medusa provider via links, so it is not present in the `package.json`. 
+
+To run the example first do
+
+```sh
+yarn link
+```
+in the root of the repository, then
+
+
+```sh
+yarn link @bkosm/medusa-notification-ses
+```
+
+in the example directory (where this README lives).
+
 ## AWS auth
 
 This app expects to have keys exported in the system environment to send out SES sandbox emails.
