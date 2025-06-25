@@ -1,3 +1,4 @@
+import { describe, expect, it, beforeEach } from '@jest/globals'
 import path from 'path'
 import { TemplateManager, TemplateError } from '../templates'
 

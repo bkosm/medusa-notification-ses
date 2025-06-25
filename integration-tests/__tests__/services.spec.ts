@@ -446,5 +446,59 @@ describe("SES notification provider", () => {
                 'Failed to check email verification status'
             )
         })
+
+        it("should bypass cache when verifyOnEachSend is true", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            transporter.sendMailReturns({ messageId: 'test-message-id' })
+            sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+                VerificationAttributes: {
+                    'someone@e.xt': { VerificationStatus: 'Success' }
+                }
+            })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: { verifyOnEachSend: true }
+            }, sesClient)
+
+            // First send
+            await service.send(notification)
+            expect(sesMock.calls()).toHaveLength(1)
+
+            // Second send should make another verification call (no cache)
+            await service.send(notification)
+            expect(sesMock.calls()).toHaveLength(2)
+        })
+
+        it("should use cache when verifyOnEachSend is false or undefined", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            const sesClient = new SESClient({})
+
+            transporter.sendMailReturns({ messageId: 'test-message-id' })
+            sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+                VerificationAttributes: {
+                    'someone@e.xt': { VerificationStatus: 'Success' }
+                }
+            })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                sandboxConfig: { verifyOnEachSend: false }
+            }, sesClient)
+
+            // First send
+            await service.send(notification)
+            expect(sesMock.calls()).toHaveLength(1)
+
+            // Second send should use cache (no additional API call)
+            await service.send(notification)
+            expect(sesMock.calls()).toHaveLength(1)
+        })
     })
 })

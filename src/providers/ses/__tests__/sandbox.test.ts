@@ -1,7 +1,8 @@
-import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand } from '@aws-sdk/client-ses'
+import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand, GetIdentityVerificationAttributesCommandInput } from '@aws-sdk/client-ses'
 import { MedusaError } from '@medusajs/framework/utils'
 import { mockClient } from 'aws-sdk-client-mock'
 import { SandboxManager, SandboxError } from '../sandbox'
+import { describe, expect, it, beforeEach } from '@jest/globals'
 
 const sesMock = mockClient(SESClient)
 
@@ -31,6 +32,11 @@ describe('SandboxManager', () => {
 
     it('should create manager with valid config and client', () => {
       const manager = SandboxManager.create({}, sesClient)
+      expect(manager).toBeInstanceOf(SandboxManager)
+    })
+
+    it('should create manager with verifyOnEachSend option', () => {
+      const manager = SandboxManager.create({ verifyOnEachSend: true }, sesClient)
       expect(manager).toBeInstanceOf(SandboxManager)
     })
   })
@@ -100,7 +106,7 @@ describe('SandboxManager', () => {
       })
 
       await manager.checkAndVerifyAddresses(['test@example.com', 'test@example.com'])
-      
+
       const calls = sesMock.calls()
       expect(calls).toHaveLength(1)
       expect(calls[0].args[0].input).toEqual({
@@ -133,21 +139,21 @@ describe('SandboxManager', () => {
 
     it('should chunk large address lists', async () => {
       const addresses = Array.from({ length: 150 }, (_, i) => `test${i}@example.com`)
-      
+
       sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
         VerificationAttributes: {}
       })
       sesMock.on(VerifyEmailIdentityCommand).resolves({})
 
       await expect(manager.checkAndVerifyAddresses(addresses)).rejects.toThrow(MedusaError)
-      
-      const getCalls = sesMock.calls().filter(call => 
+
+      const getCalls = sesMock.calls().filter(call =>
         call.args[0].constructor.name === 'GetIdentityVerificationAttributesCommand'
       )
       expect(getCalls).toHaveLength(2) // 150 addresses chunked into 2 calls (100 + 50)
 
-      expect(getCalls[0].args[0].input.Identities).toHaveLength(100)
-      expect(getCalls[1].args[0].input.Identities).toHaveLength(50)
+      expect((getCalls[0].args[0].input as GetIdentityVerificationAttributesCommandInput).Identities).toHaveLength(100)
+      expect((getCalls[1].args[0].input as GetIdentityVerificationAttributesCommandInput).Identities).toHaveLength(50)
     })
 
     it('should not start duplicate verifications', async () => {
@@ -162,16 +168,50 @@ describe('SandboxManager', () => {
       await expect(manager.checkAndVerifyAddresses(['pending@example.com']))
         .rejects.toThrow(MedusaError)
 
-      const firstCallCount = sesMock.calls().length
-
       // Second call should not start verification again
       await expect(manager.checkAndVerifyAddresses(['pending@example.com']))
         .rejects.toThrow(MedusaError)
 
-      const verificationCalls = sesMock.calls().filter(call => 
+      const verificationCalls = sesMock.calls().filter(call =>
         call.args[0].constructor.name === 'VerifyEmailIdentityCommand'
       )
       expect(verificationCalls).toHaveLength(1) // Only one verification call
+    })
+
+    it('should bypass cache when verifyOnEachSend is true', async () => {
+      const manager = SandboxManager.create({ verifyOnEachSend: true }, sesClient)!
+
+      sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+        VerificationAttributes: {
+          'test@example.com': { VerificationStatus: 'Success' }
+        }
+      })
+
+      // First call
+      await manager.checkAndVerifyAddresses(['test@example.com'])
+      expect(sesMock.calls()).toHaveLength(1)
+
+      // Second call should not use cache and make another API call
+      await manager.checkAndVerifyAddresses(['test@example.com'])
+      expect(sesMock.calls()).toHaveLength(2) // Additional API call made
+    })
+
+    it('should still use cache when verifyOnEachSend is false', async () => {
+      const manager = SandboxManager.create({ verifyOnEachSend: false }, sesClient)!
+
+      sesMock.on(GetIdentityVerificationAttributesCommand).resolves({
+        VerificationAttributes: {
+          'test@example.com': { VerificationStatus: 'Success' }
+        }
+      })
+
+      // First call
+      await manager.checkAndVerifyAddresses(['test@example.com'])
+      expect(sesMock.calls()).toHaveLength(1)
+
+      // Second call should use cache
+      await manager.checkAndVerifyAddresses(['test@example.com'])
+      expect(sesMock.calls()).toHaveLength(1) // No additional API calls
     })
   })
 

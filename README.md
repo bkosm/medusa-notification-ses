@@ -310,3 +310,4 @@ SES sandbox mode configuration (optional):
 - When present (even as empty object), enables sandbox mode with automatic email verification
 - Only include in development/staging environments
 - Automatically handles recipient address verification
+- `verifyOnEachSend` (boolean, default: false) - When true, bypasses verification cache and checks SES on every send

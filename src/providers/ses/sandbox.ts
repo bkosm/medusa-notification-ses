@@ -3,6 +3,7 @@ import { error } from './utils'
 
 export interface SandboxConfig {
   // Presence of object enables sandbox mode
+  verifyOnEachSend?: boolean
 }
 
 export class SandboxError extends Error {
@@ -15,15 +16,18 @@ export class SandboxError extends Error {
 export class SandboxManager {
   private verifiedAddresses = new Map<string, boolean>()
   private pendingVerifications = new Set<string>()
+  private verifyOnEachSend: boolean
 
-  private constructor(private sesClient: SESClient) {}
+  private constructor(private sesClient: SESClient, verifyOnEachSend: boolean = false) {
+    this.verifyOnEachSend = verifyOnEachSend
+  }
 
   static create(config?: SandboxConfig, sesClient?: SESClient): SandboxManager | null {
     if (!config || !sesClient) {
       return null
     }
     
-    return new SandboxManager(sesClient)
+    return new SandboxManager(sesClient, config.verifyOnEachSend ?? false)
   }
 
   async checkAndVerifyAddresses(addresses: any[]): Promise<void> {
@@ -44,16 +48,21 @@ export class SandboxManager {
     }
     const unverifiedAddresses: string[] = []
 
-    // Check cached verification status first
-    for (const address of uniqueAddresses) {
-      const cached = this.verifiedAddresses.get(address)
-      if (cached === false || cached === undefined) {
-        unverifiedAddresses.push(address)
+    if (this.verifyOnEachSend) {
+      // Skip cache check when verifyOnEachSend is true
+      unverifiedAddresses.push(...uniqueAddresses)
+    } else {
+      // Check cached verification status first
+      for (const address of uniqueAddresses) {
+        const cached = this.verifiedAddresses.get(address)
+        if (cached === false || cached === undefined) {
+          unverifiedAddresses.push(address)
+        }
       }
-    }
 
-    if (unverifiedAddresses.length === 0) {
-      return // All addresses are verified
+      if (unverifiedAddresses.length === 0) {
+        return // All addresses are verified
+      }
     }
 
     // Get current verification status from SES

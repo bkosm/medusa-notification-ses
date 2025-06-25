@@ -1,7 +1,4 @@
-import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
-import type { Transporter } from "nodemailer"
-import { SesNotificationService } from "../adapter"
-import { describe, expect, it, beforeEach, jest } from '@jest/globals'
+import { describe, expect, it } from '@jest/globals'
 import { newMockTransporter } from "../../../__mocks__/mockTransporter"
 import { testService } from "../../../__fixtures__/testService"
 import path from 'path'
