@@ -1,8 +1,7 @@
 # Medusa Provider - Notification SES
 
-> This project is still WIP. Stable and tested release will go in a major version.
-
-Send emails from your Medusa application through AWS Simple Email Service using nodemailer transport.
+Send emails from your Medusa application through AWS Simple Email Service.
+Supports SES sandbox, attachments and handlebars templates.
 
 ## Installation
 
@@ -26,24 +25,25 @@ export default defineConfig({
             id: "notification-ses",
             options: {
               channels: ["email"],
+              // Nodemailer send options, passed on each sent message
               nodemailerConfig: {
                 from: "noreply@yourdomain.com",
               },
               templatesConfig: {
                 directory: "./email-templates",
               },
-              // Enables SES sandbox mode with automatic email verification
+              // Enables SES sandbox mode with automatic email address verification
               sandboxConfig: {},
-            }
+            },
           },
         ],
       },
     },
-  ]
-})
+  ],
+});
 ```
 
-See the [example Medusa app](./examples/app/medusa-config.ts) for more details.
+See the [example Medusa app](./examples/app/medusa-config.ts) how it looks in practice.
 
 ## SES Sandbox Mode
 
@@ -51,7 +51,7 @@ When using AWS SES in sandbox mode (common in development/staging environments),
 
 ### Configuration
 
-Enable sandbox mode by adding the `sandboxConfig` option.
+Enable sandbox mode by defining the `sandboxConfig` option.
 
 ### How Sandbox Mode Works
 
@@ -59,177 +59,48 @@ Enable sandbox mode by adding the `sandboxConfig` option.
 2. **Automatic Verification**: Unverified addresses automatically trigger verification emails via `VerifyEmailIdentity` API
 3. **Retryable Errors**: Throws `MedusaError.Types.INVALID_DATA` for pending verifications, signaling Medusa workflows to retry
 
-### Workflow Integration
-
-The sandbox mode is designed to work with Medusa's workflow retry system. When an email is sent to unverified addresses, the provider throws a retryable error that workflows can handle automatically.
-
-#### Subscriber Example with Workflow
-
-```typescript
-import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
-import { Modules } from "@medusajs/framework/utils"
-
-// Define the workflow for order confirmation emails
-const sendOrderConfirmationWorkflow = createWorkflow(
-  "send-order-confirmation",
-  (input: { orderId: string }) => {
-    return sendNotificationStep({
-      notification: {
-        to: input.customerEmail,
-        channel: "email",
-        template: "order-confirmation",
-        data: {
-          orderNumber: input.orderNumber,
-          customerName: input.customerName,
-          // ... other order data
-        },
-        content: {
-          subject: `Order Confirmation #${input.orderNumber}`
-        }
-      }
-    })
-  }
-)
-
-// Configure step with appropriate retry settings for email verification
-const sendNotificationStep = createStep(
-  {
-    name: "send-order-confirmation",
-    maxRetries: 20,        // Allow more retries for user verification
-    retryInterval: 60,     // Check every minute
-  },
-  async (input) => {
-    const notificationService = input.scope.resolve(Modules.NOTIFICATION)
-    return await notificationService.createNotifications(input.notification)
-  }
-)
-
-// Subscriber that handles order placed events
-export default async function orderPlacedHandler({ 
-  event, 
-  container 
-}: SubscriberArgs<{ id: string }>) {
-  // Execute workflow with retry handling
-  await sendOrderConfirmationWorkflow(container).run({
-    input: {
-      orderId: event.data.id,
-      // ... extract other data from order
-    }
-  })
-}
-
-export const config: SubscriberConfig = {
-  event: ["order.placed"],
-}
-```
-
-## Usage
-
-### Basic Email Sending
-
-Use Medusa's notification module to send emails with raw HTML:
-
-```typescript
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { INotificationModuleService } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
-
-export async function POST(req: MedusaRequest, res: MedusaResponse) {
-  const notificationService: INotificationModuleService = req.scope.resolve(
-    Modules.NOTIFICATION
-  )
-
-  await notificationService.createNotifications({
-    to: "customer@example.com",
-    channel: "email",
-    content: {
-      subject: "Order Confirmed",
-      text: "Your order has been confirmed",
-      html: "<p>Your order has been confirmed</p>",
-    },
-    attachments: [{
-      filename: "receipt.pdf",
-      content: pdfBufferBase64String,
-      content_type: "application/pdf",
-    }],
-  })
-
-  res.json({ success: true })
-}
-```
-
-### Template-Based Email Sending
-
-Send emails using pre-defined templates with dynamic data:
-
-```typescript
-await notificationService.createNotifications({
-  to: "customer@example.com",
-  channel: "email",
-  template: "order-confirmation",
-  data: {
-    customerName: "John Doe",
-    orderNumber: "ORD-123",
-    items: [
-      { name: "Product A", quantity: 2, price: 29.99 },
-      { name: "Product B", quantity: 1, price: 15.50 }
-    ],
-    total: 75.48,
-    deliveryDate: "2024-01-15"
-  },
-  content: {
-    subject: "Order Confirmation #ORD-123"
-  }
-})
-```
+To re-request verification on every send, define `sandboxConfig.verifyOnEachSend: false` in the configuration.
 
 ## Email Templates
 
-### Template Setup
-
+The provider has built-in support for handlebars templates to use in your emails.
 The template system uses a directory-based structure where each template ID maps to a folder containing:
 
 1. **`handlebars.template.html`** - Pre-compiled MJML template with Handlebars placeholders
 2. **`data.schema.json`** - JSON schema for validating template data
 
-### Directory Structure
+### Example template setup
 
-```
-email-templates/
-├── welcome-email/
-│   ├── handlebars.template.html
-│   └── data.schema.json
-├── order-confirmation/
-│   ├── handlebars.template.html
-│   └── data.schema.json
-└── password-reset/
-    ├── handlebars.template.html
-    └── data.schema.json
-```
+Set `templatesConfig.directory` to a resolvable path to `email-templates`.
 
-### Example Template
+#### `email-templates/welcome-email/handlebars.template.html`
 
-**`email-templates/welcome-email/handlebars.template.html`**
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>Welcome to {{companyName}}</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Welcome {{firstName}}!</h1>
-    <p>Thank you for joining {{companyName}}. We're excited to have you on board.</p>
+    <p>
+      Thank you for joining {{companyName}}. We're excited to have you on board.
+    </p>
     <p>Your email address is: {{email}}</p>
     {{#if hasPromo}}
-    <p>Use promo code <strong>{{promoCode}}</strong> for 20% off your first order!</p>
+    <p>
+      Use promo code <strong>{{promoCode}}</strong> for 20% off your first
+      order!
+    </p>
     {{/if}}
-    <p>Best regards,<br>The {{companyName}} Team</p>
-</body>
+    <p>Best regards,<br />The {{companyName}} Team</p>
+  </body>
 </html>
 ```
 
-**`email-templates/welcome-email/data.schema.json`**
+#### `email-templates/welcome-email/data.schema.json`
+
 ```json
 {
   "type": "object",
@@ -266,14 +137,7 @@ email-templates/
 }
 ```
 
-### Template Best Practices
-
-1. **Pre-compile MJML**: Compile MJML to HTML at build time for better performance
-2. **Validate Data**: Use comprehensive JSON schemas to catch data errors early
-3. **Use Handlebars Helpers**: Leverage built-in helpers like `{{#if}}`, `{{#each}}` for dynamic content
-4. **Conditional Logic**: Use JSON schema conditional validation for complex data requirements
-5. **Fallback Content**: Always provide fallback text content in case HTML rendering fails
-6. **Template Naming**: Use descriptive, kebab-case names for template IDs
+Now, you can reference the `welcome-email` template name during a `createNotifications` invocation.
 
 ### Template Processing Flow
 
@@ -285,29 +149,95 @@ email-templates/
    - Rendered HTML replaces the notification's HTML content
 3. **Caching**: Templates are cached in memory for optimal performance
 
+## Usage
+
+### Basic Email Sending
+
+Use Medusa's notification module to send emails with raw HTML:
+
+```typescript
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { INotificationModuleService } from "@medusajs/framework/types";
+import { Modules } from "@medusajs/framework/utils";
+
+export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  const notificationService: INotificationModuleService = req.scope.resolve(
+    Modules.NOTIFICATION
+  );
+
+  await notificationService.createNotifications({
+    to: "customer@example.com",
+    channel: "email",
+    content: {
+      subject: "Order Confirmed",
+      text: "Your order has been confirmed",
+      html: "<p>Your order has been confirmed</p>",
+    },
+    attachments: [
+      {
+        filename: "receipt.pdf",
+        content: pdfBufferBase64String,
+        content_type: "application/pdf",
+      },
+    ],
+  });
+
+  res.json({ success: true });
+}
+```
+
+### Template-Based Email Sending
+
+Send emails using pre-defined templates with dynamic data:
+
+```typescript
+await notificationService.createNotifications({
+  to: "customer@example.com",
+  channel: "email",
+  template: "order-confirmation",
+  data: {
+    customerName: "John Doe",
+    orderNumber: "ORD-123",
+    items: [
+      { name: "Product A", quantity: 2, price: 29.99 },
+      { name: "Product B", quantity: 1, price: 15.5 },
+    ],
+    total: 75.48,
+    deliveryDate: "2024-01-15",
+  },
+  content: {
+    subject: "Order Confirmation #ORD-123",
+  },
+});
+```
+
 ## Configuration Options
 
 ### `sesClientConfig`
-AWS SES client configuration (optional):
-- `region` - AWS region
-- `credentials` - AWS credentials
-- Other `SESClientConfig` options
+
+AWS SES client configuration (optional). 
+
+See the full set of options here: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/Package/-aws-sdk-client-ses/Interface/SESClientConfig
 
 ### `nodemailerConfig`
-Static nodemailer options (optional):
-- `from` - Default sender address
-- `replyTo` - Default reply-to address  
-- `cc`, `bcc` - Default carbon copy addresses
-- `attachments` - Static attachments
-- Other `SendMailOptions` (excluding `subject`, `text`, `html`)
+
+Nodemailer send options (`from` is required).
+
+See the full set of options here: https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/nodemailer/v3/index.d.ts#L104-L177
+Only `subject`, `text` and `html` are substituted for runtime values at all times. Fields like `to`, `attachments` are concatenated with runtime values.
 
 ### `templatesConfig`
+
 Email template configuration (optional):
+
 - `directory` - Path to directory containing template folders
 
+Disables templating feature if the object is not set.
+
 ### `sandboxConfig`
+
 SES sandbox mode configuration (optional):
-- When present (even as empty object), enables sandbox mode with automatic email verification
-- Only include in development/staging environments
-- Automatically handles recipient address verification
+
 - `verifyOnEachSend` (boolean, default: false) - When true, bypasses verification cache and checks SES on every send
+
+Disables sandbox feature if the object is not set (will fail on unverified addresses at runtime if the account uses SES sandbox).
