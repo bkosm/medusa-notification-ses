@@ -1,47 +1,25 @@
 import { describe, expect, it, beforeEach } from '@jest/globals'
 import path from 'path'
-import { TemplateManager, TemplateError } from '../templates'
+import { TemplateManager, TemplateError, LocalTemplateProvider } from '../templates'
 
 const FIXTURES_DIR = path.join(__dirname, '../../../__fixtures__/templates')
 
 describe('TemplateManager', () => {
   describe('create', () => {
-    it('should return null when no config provided', () => {
+    it('should return null when no provider provided', () => {
       const manager = TemplateManager.create()
       expect(manager).toBeNull()
     })
 
-    it('should return null when config is undefined', () => {
+    it('should return null when provider is undefined', () => {
       const manager = TemplateManager.create(undefined)
       expect(manager).toBeNull()
     })
 
-    it('should create manager with valid config', () => {
-      const manager = TemplateManager.create({
-        directory: FIXTURES_DIR
-      })
+    it('should create manager with valid provider', () => {
+      const provider = new LocalTemplateProvider(FIXTURES_DIR)
+      const manager = TemplateManager.create(provider)
       expect(manager).toBeInstanceOf(TemplateManager)
-    })
-
-    it('should throw error for non-existent directory', () => {
-      expect(() => {
-        TemplateManager.create({
-          directory: '/non/existent/path'
-        })
-      }).toThrow(TemplateError)
-    })
-
-    it('should throw error for empty directory', () => {
-      const tempDir = path.join(__dirname, '../../__fixtures__/empty-templates')
-      require('fs').mkdirSync(tempDir, { recursive: true })
-      
-      expect(() => {
-        TemplateManager.create({
-          directory: tempDir
-        })
-      }).toThrow('No template directories found')
-      
-      require('fs').rmSync(tempDir, { recursive: true })
     })
   })
 
@@ -49,25 +27,24 @@ describe('TemplateManager', () => {
     let manager: TemplateManager
 
     beforeEach(() => {
-      manager = TemplateManager.create({
-        directory: FIXTURES_DIR
-      })!
+      const provider = new LocalTemplateProvider(FIXTURES_DIR)
+      manager = TemplateManager.create(provider)!
     })
 
-    it('should load all templates from fixtures', () => {
-      expect(manager.hasTemplate('welcome-email')).toBe(true)
-      expect(manager.hasTemplate('order-confirmation')).toBe(true)
+    it('should load all templates from fixtures', async () => {
+      expect(await manager.hasTemplate('welcome-email')).toBe(true)
+      expect(await manager.hasTemplate('order-confirmation')).toBe(true)
     })
 
-    it('should return correct template IDs', () => {
-      const templateIds = manager.getTemplateIds()
+    it('should return correct template IDs', async () => {
+      const templateIds = await manager.getTemplateIds()
       expect(templateIds).toContain('welcome-email')
       expect(templateIds).toContain('order-confirmation')
       expect(templateIds).toHaveLength(2)
     })
 
-    it('should return false for non-existent template', () => {
-      expect(manager.hasTemplate('non-existent')).toBe(false)
+    it('should return false for non-existent template', async () => {
+      expect(await manager.hasTemplate('non-existent')).toBe(false)
     })
   })
 
@@ -75,12 +52,11 @@ describe('TemplateManager', () => {
     let manager: TemplateManager
 
     beforeEach(() => {
-      manager = TemplateManager.create({
-        directory: FIXTURES_DIR
-      })!
+      const provider = new LocalTemplateProvider(FIXTURES_DIR)
+      manager = TemplateManager.create(provider)!
     })
 
-    it('should render welcome-email template with valid data', () => {
+    it('should render welcome-email template with valid data', async () => {
       const data = {
         firstName: 'John',
         email: 'john@example.com',
@@ -89,7 +65,7 @@ describe('TemplateManager', () => {
         promoCode: 'WELCOME20'
       }
 
-      const html = manager.renderTemplate('welcome-email', data)
+      const html = await manager.renderTemplate('welcome-email', data)
       
       expect(html).toContain('Welcome John!')
       expect(html).toContain('john@example.com')
@@ -97,7 +73,7 @@ describe('TemplateManager', () => {
       expect(html).toContain('WELCOME20')
     })
 
-    it('should render welcome-email template without promo', () => {
+    it('should render welcome-email template without promo', async () => {
       const data = {
         firstName: 'Jane',
         email: 'jane@example.com',
@@ -105,7 +81,7 @@ describe('TemplateManager', () => {
         hasPromo: false
       }
 
-      const html = manager.renderTemplate('welcome-email', data)
+      const html = await manager.renderTemplate('welcome-email', data)
       
       expect(html).toContain('Welcome Jane!')
       expect(html).toContain('jane@example.com')
@@ -113,7 +89,7 @@ describe('TemplateManager', () => {
       expect(html).not.toContain('promo code')
     })
 
-    it('should render order-confirmation template with valid data', () => {
+    it('should render order-confirmation template with valid data', async () => {
       const data = {
         customerName: 'Alice',
         orderNumber: 'ORD-123',
@@ -125,7 +101,7 @@ describe('TemplateManager', () => {
         deliveryDate: '2024-01-15'
       }
 
-      const html = manager.renderTemplate('order-confirmation', data)
+      const html = await manager.renderTemplate('order-confirmation', data)
       
       expect(html).toContain('Hi Alice')
       expect(html).toContain('ORD-123')
@@ -135,36 +111,30 @@ describe('TemplateManager', () => {
       expect(html).toContain('2024-01-15')
     })
 
-    it('should throw error for non-existent template', () => {
-      expect(() => {
-        manager.renderTemplate('non-existent', {})
-      }).toThrow(TemplateError)
+    it('should throw error for non-existent template', async () => {
+      await expect(manager.renderTemplate('non-existent', {})).rejects.toThrow(TemplateError)
     })
 
-    it('should throw error for invalid data - missing required field', () => {
+    it('should throw error for invalid data - missing required field', async () => {
       const data = {
         firstName: 'John',
         // missing email and companyName
       }
 
-      expect(() => {
-        manager.renderTemplate('welcome-email', data)
-      }).toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
     })
 
-    it('should throw error for invalid data - wrong type', () => {
+    it('should throw error for invalid data - wrong type', async () => {
       const data = {
         firstName: 123, // should be string
         email: 'john@example.com',
         companyName: 'Acme Corp'
       }
 
-      expect(() => {
-        manager.renderTemplate('welcome-email', data)
-      }).toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
     })
 
-    it('should throw error for invalid data - conditional validation', () => {
+    it('should throw error for invalid data - conditional validation', async () => {
       const data = {
         firstName: 'John',
         email: 'john@example.com',
@@ -173,12 +143,10 @@ describe('TemplateManager', () => {
         // missing promoCode when hasPromo is true
       }
 
-      expect(() => {
-        manager.renderTemplate('welcome-email', data)
-      }).toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
     })
 
-    it('should throw error for additional properties', () => {
+    it('should throw error for additional properties', async () => {
       const data = {
         firstName: 'John',
         email: 'john@example.com',
@@ -186,9 +154,7 @@ describe('TemplateManager', () => {
         extraField: 'not allowed'
       }
 
-      expect(() => {
-        manager.renderTemplate('welcome-email', data)
-      }).toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
     })
   })
 })

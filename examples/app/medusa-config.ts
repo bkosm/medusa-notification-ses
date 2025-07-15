@@ -1,4 +1,5 @@
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
+import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -26,9 +27,9 @@ module.exports = defineConfig({
               nodemailerConfig: {
                 from: 'no-reply@commerce.itnsh.it'
               },
-              templatesConfig: {
-                directory: `${__dirname}/src/emails`,
-              },
+              templateProvider: new LocalTemplateProvider(
+                `${__dirname}/src/emails`
+              ),
               sandboxConfig: {},
             }
           },

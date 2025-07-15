@@ -1,11 +1,65 @@
-import fs from 'fs'
+import fs from 'fs/promises'
 import path from 'path'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import Handlebars from 'handlebars'
 
-export interface TemplatesConfig {
-  directory: string
+export interface TemplateProvider {
+  listIds(): Promise<string[]>
+  getFiles(id: string): Promise<{ template: string; schema: string }>
+}
+
+export class LocalTemplateProvider implements TemplateProvider {
+  constructor(private directory: string) {}
+
+  private async checkDirectoryExists(): Promise<void> {
+    try {
+      const stats = await fs.stat(this.directory)
+      if (!stats.isDirectory()) {
+        throw new TemplateError(`Templates path is not a directory: ${this.directory}`)
+      }
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new TemplateError(`Templates directory does not exist: ${this.directory}`)
+      }
+      throw error
+    }
+  }
+
+  async listIds(): Promise<string[]> {
+    await this.checkDirectoryExists()
+    const dirents = await fs.readdir(this.directory, { withFileTypes: true })
+    const templateIds = dirents
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name)
+
+    if (templateIds.length === 0) {
+      throw new TemplateError(`No template directories found in: ${this.directory}`)
+    }
+
+    return templateIds
+  }
+
+  async getFiles(id: string): Promise<{ template: string; schema: string }> {
+    const templateDir = path.join(this.directory, id)
+    const templatePath = path.join(templateDir, 'handlebars.template.html')
+    const schemaPath = path.join(templateDir, 'data.schema.json')
+
+    try {
+      const templateContent = await fs.readFile(templatePath, 'utf-8')
+      const schemaContent = await fs.readFile(schemaPath, 'utf-8')
+      return { template: templateContent, schema: schemaContent }
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new TemplateError(`File not found: ${error.path}`, id)
+      }
+      throw new TemplateError(
+        `Failed to read files for template '${id}': ${error.message}`,
+        id,
+        error
+      )
+    }
+  }
 }
 
 export interface TemplateMetadata {
@@ -25,59 +79,37 @@ export class TemplateError extends Error {
 export class TemplateManager {
   private templates = new Map<string, TemplateMetadata>()
   private ajv = addFormats(new Ajv(), ['email'])
+  private initializationPromise: Promise<void> | null = null
 
-  private constructor(private config: TemplatesConfig) {}
+  private constructor(private provider: TemplateProvider) {}
 
-  static create(config?: TemplatesConfig): TemplateManager | null {
-    if (!config) {
+  static create(provider?: TemplateProvider): TemplateManager | null {
+    if (!provider) {
       return null
     }
-    
-    const manager = new TemplateManager(config)
-    manager.initialize()
-    return manager
+    return new TemplateManager(provider)
   }
 
-  private initialize(): void {
-    if (!fs.existsSync(this.config.directory)) {
-      throw new TemplateError(`Templates directory does not exist: ${this.config.directory}`)
+  private initialize(): Promise<void> {
+    if (this.initializationPromise) {
+      return this.initializationPromise
     }
-
-    if (!fs.statSync(this.config.directory).isDirectory()) {
-      throw new TemplateError(`Templates path is not a directory: ${this.config.directory}`)
-    }
-
-    const templateIds = fs.readdirSync(this.config.directory, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name)
-
-    if (templateIds.length === 0) {
-      throw new TemplateError(`No template directories found in: ${this.config.directory}`)
-    }
-
-    for (const templateId of templateIds) {
-      this.loadTemplate(templateId)
-    }
+    this.initializationPromise = this._initialize()
+    return this.initializationPromise
   }
 
-  private loadTemplate(templateId: string): void {
-    const templateDir = path.join(this.config.directory, templateId)
-    const templatePath = path.join(templateDir, 'handlebars.template.html')
-    const schemaPath = path.join(templateDir, 'data.schema.json')
+  private async _initialize(): Promise<void> {
+    const templateIds = await this.provider.listIds()
+    await Promise.all(templateIds.map((templateId) => this.loadTemplate(templateId)))
+  }
 
-    if (!fs.existsSync(templatePath)) {
-      throw new TemplateError(`Template file not found: ${templatePath}`, templateId)
-    }
-
-    if (!fs.existsSync(schemaPath)) {
-      throw new TemplateError(`Schema file not found: ${schemaPath}`, templateId)
-    }
-
+  private async loadTemplate(templateId: string): Promise<void> {
     try {
-      const templateContent = fs.readFileSync(templatePath, 'utf-8')
+      const { template: templateContent, schema: schemaContent } =
+        await this.provider.getFiles(templateId)
+
       const template = Handlebars.compile(templateContent)
 
-      const schemaContent = fs.readFileSync(schemaPath, 'utf-8')
       const schema = JSON.parse(schemaContent)
       const validator = this.ajv.compile(schema)
 
@@ -85,31 +117,36 @@ export class TemplateManager {
         id: templateId,
         template,
         schema,
-        validator
+        validator,
       })
     } catch (error) {
       throw new TemplateError(
-        `Failed to load template '${templateId}': ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to load template '${templateId}': ${
+          error instanceof Error ? error.message : String(error)
+        }`,
         templateId,
         error instanceof Error ? error : undefined
       )
     }
   }
 
-  hasTemplate(templateId: string): boolean {
+  async hasTemplate(templateId: string): Promise<boolean> {
+    await this.initialize()
     return this.templates.has(templateId)
   }
 
-  renderTemplate(templateId: string, data: unknown): string {
+  async renderTemplate(templateId: string, data: unknown): Promise<string> {
+    await this.initialize()
     const template = this.templates.get(templateId)
     if (!template) {
       throw new TemplateError(`Template not found: ${templateId}`, templateId)
     }
 
     if (!template.validator(data)) {
-      const errors = template.validator.errors
-        ?.map(err => `${err.instancePath || 'root'}: ${err.message}`)
-        .join(', ') || 'Unknown validation error'
+      const errors =
+        template.validator.errors
+          ?.map((err) => `${err.instancePath || 'root'}: ${err.message}`)
+          .join(', ') || 'Unknown validation error'
       throw new TemplateError(
         `Template data validation failed for '${templateId}': ${errors}`,
         templateId
@@ -120,14 +157,17 @@ export class TemplateManager {
       return template.template(data)
     } catch (error) {
       throw new TemplateError(
-        `Template rendering failed for '${templateId}': ${error instanceof Error ? error.message : String(error)}`,
+        `Template rendering failed for '${templateId}': ${
+          error instanceof Error ? error.message : String(error)
+        }`,
         templateId,
         error instanceof Error ? error : undefined
       )
     }
   }
 
-  getTemplateIds(): string[] {
+  async getTemplateIds(): Promise<string[]> {
+    await this.initialize()
     return Array.from(this.templates.keys())
   }
 }
