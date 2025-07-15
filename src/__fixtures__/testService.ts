@@ -4,7 +4,7 @@ import { NodemailerConfig, SesNotificationService, SesNotificationServiceConfig 
 
 export const testService = (
     transporter: MockTransporter, 
-    nodemailerConfig?: NodemailerConfig, 
+    nodemailerConfig: NodemailerConfig, 
     configOverrides?: Partial<SesNotificationServiceConfig>,
     sesClient?: SESClient
 ) => new SesNotificationService(

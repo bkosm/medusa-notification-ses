@@ -1,0 +1,64 @@
+import { S3Client, ListObjectsV2Command, GetObjectCommand, S3ClientConfig } from '@aws-sdk/client-s3'
+import { TemplateProvider, TemplateError } from './templates'
+
+export interface S3TemplateProviderConfig {
+  clientConfig?: S3ClientConfig
+  bucket: string
+  prefix?: string
+}
+
+export class S3TemplateProvider implements TemplateProvider {
+  private bucket: string
+  private prefix: string
+
+  constructor(config: S3TemplateProviderConfig, private s3: S3Client = new S3Client(config.clientConfig ?? [])) {
+    this.bucket = config.bucket
+    this.prefix = config.prefix || ''
+  }
+
+  async listIds(): Promise<string[]> {
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: this.prefix,
+        Delimiter: '/',
+      })
+      const response = await this.s3.send(command)
+      const ids = response.CommonPrefixes?.map(p => p.Prefix!.replace(this.prefix, '').replace(/\/$/, '')) || []
+      if (ids.length === 0) {
+        throw new TemplateError(`No template directories found in S3 bucket: ${this.bucket}, prefix: ${this.prefix}`)
+      }
+      return ids
+    } catch (error) {
+      throw new TemplateError(`Failed to list templates from S3: ${error.message}`, undefined, error)
+    }
+  }
+
+  async getFiles(id: string): Promise<{ template: string; schema: string }> {
+    const templateKey = `${this.prefix}${id}/handlebars.template.html`
+    const schemaKey = `${this.prefix}${id}/data.schema.json`
+
+    try {
+      const [template, schema] = await Promise.all([
+        this.getObject(templateKey),
+        this.getObject(schemaKey),
+      ])
+      return { template, schema }
+    } catch (error) {
+      throw new TemplateError(`Failed to get files for template ${id} from S3: ${error.message}`, id, error)
+    }
+  }
+
+  private async getObject(key: string): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      })
+      const response = await this.s3.send(command)
+      return response.Body?.transformToString() || ''
+    } catch (error) {
+      throw new Error(`Failed to get object ${key} from S3: ${error.message}`)
+    }
+  }
+}

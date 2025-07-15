@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import { newMockTransporter } from "../../../__mocks__/mockTransporter"
 import { testService } from "../../../__fixtures__/testService"
 import path from 'path'
-import { LocalTemplateProvider } from '../templates'
+import { LocalTemplateProvider } from '../local-template-provider'
 
 // Test the addressesToArray function indirectly through the service
 describe("SesNotificationService", () => {
@@ -42,7 +42,7 @@ describe("SesNotificationService", () => {
 
             transporter.sendMailReturns({ messageId: 'test-id' })
 
-            const service = testService(transporter)
+            const service = testService(transporter, { from: '' })
 
             await service.send({
                 to: "recipient@example.com",
@@ -102,7 +102,7 @@ describe("SesNotificationService", () => {
             const transporter = newMockTransporter()
             transporter.sendMailReturns({ messageId: 'test-id' })
 
-            const service = testService(transporter)
+            const service = testService(transporter, { from: '' })
 
             await service.send({
                 to: "recipient@example.com",
