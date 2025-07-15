@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import { newMockTransporter } from "../../../__mocks__/mockTransporter"
 import { testService } from "../../../__fixtures__/testService"
 import path from 'path'
+import { LocalTemplateProvider } from '../templates'
 
 // Test the addressesToArray function indirectly through the service
 describe("SesNotificationService", () => {
@@ -71,9 +72,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templatesConfig: {
-                    directory: FIXTURES_DIR
-                }
+                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
             })
 
             await service.send({
@@ -99,7 +98,7 @@ describe("SesNotificationService", () => {
             )
         })
 
-        it("should send email without template when no templatesConfig provided", async () => {
+        it("should send email without template when no templateProvider provided", async () => {
             const transporter = newMockTransporter()
             transporter.sendMailReturns({ messageId: 'test-id' })
 
@@ -129,9 +128,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templatesConfig: {
-                    directory: FIXTURES_DIR
-                }
+                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
             })
 
             await expect(service.send({
@@ -150,9 +147,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templatesConfig: {
-                    directory: FIXTURES_DIR
-                }
+                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
             })
 
             await expect(service.send({
@@ -176,9 +171,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templatesConfig: {
-                    directory: FIXTURES_DIR
-                }
+                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
             })
 
             await service.send({

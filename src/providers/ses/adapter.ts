@@ -12,7 +12,7 @@ import type { Transporter, SendMailOptions } from "nodemailer"
 import type { Address, Attachment as NodemailerAttachment } from "nodemailer/lib/mailer"
 import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
 
-import { TemplateManager, TemplatesConfig } from "./templates"
+import { TemplateManager, TemplateProvider } from "./templates"
 import { SandboxManager, SandboxConfig } from "./sandbox"
 import { error } from "./utils"
 
@@ -35,7 +35,7 @@ export type SesClientConfig = NonNullable<CheckOptionalClientConfig<SESClientCon
 export type SesNotificationServiceConfig = {
     nodemailerConfig: NodemailerConfig
     sesClientConfig?: SesClientConfig
-    templatesConfig?: TemplatesConfig
+    templateProvider?: TemplateProvider
     sandboxConfig?: SandboxConfig
 }
 
@@ -60,7 +60,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         this.config_ = options
         this.logger_ = logger
         this.transporter_ = transporter
-        this.templateManager_ = TemplateManager.create(options.templatesConfig)
+        this.templateManager_ = TemplateManager.create(options.templateProvider)
         this.sandboxManager_ = SandboxManager.create(options.sandboxConfig, sesClient)
     }
 
@@ -97,13 +97,13 @@ export class SesNotificationService extends AbstractNotificationProviderService 
 
         const { template: templateId, data } = notification
 
-        if (this.templateManager_ && templateId !== "") {
-            if (!this.templateManager_.hasTemplate(templateId)) {
+        if (this.templateManager_ && templateId) {
+            if (!await this.templateManager_.hasTemplate(templateId)) {
                 throw error('INVALID_ARGUMENT', `Template '${templateId}' not found`)
             }
 
             try {
-                html = this.templateManager_.renderTemplate(templateId, data)
+                html = await this.templateManager_.renderTemplate(templateId, data)
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : 'unknown'
                 throw error('UNEXPECTED_STATE', `Template rendering failed: ${message}`)

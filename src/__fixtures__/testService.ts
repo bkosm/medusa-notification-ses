@@ -1,6 +1,6 @@
 import { SESClient } from "@aws-sdk/client-ses";
 import { MockTransporter } from "../__mocks__/mockTransporter";
-import { NodemailerConfig, SesClientConfig, SesNotificationService, SesNotificationServiceConfig } from "../providers/ses/adapter";
+import { NodemailerConfig, SesNotificationService, SesNotificationServiceConfig } from "../providers/ses/adapter";
 
 export const testService = (
     transporter: MockTransporter, 
@@ -14,7 +14,7 @@ export const testService = (
     {
         nodemailerConfig,
         sesClientConfig: configOverrides?.sesClientConfig,
-        templatesConfig: configOverrides?.templatesConfig,
+        templateProvider: configOverrides?.templateProvider,
         sandboxConfig: configOverrides?.sandboxConfig,
     },
     sesClient,
