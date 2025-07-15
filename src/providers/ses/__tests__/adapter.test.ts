@@ -200,4 +200,22 @@ describe("SesNotificationService", () => {
             )
         })
     })
+
+    describe("sesClientConfig", () => {
+        it("should pass sesClientConfig to SESClient", () => {
+            const transporter = newMockTransporter()
+            const service = testService(
+                transporter,
+                {
+                    from: '',
+                },
+                {
+                    sesClientConfig: {
+                        region: "us-east-1",
+                    },
+                }
+            )
+            expect(service).toBeDefined()
+        })
+    })
 })
