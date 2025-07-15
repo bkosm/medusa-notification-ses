@@ -30,7 +30,7 @@ export type NodemailerConfig = SafeOmit<SendMailOptions,
     from: string
 }
 
-export type SesClientConfig = CheckOptionalClientConfig<SESClientConfig>
+export type SesClientConfig = NonNullable<CheckOptionalClientConfig<SESClientConfig>[0]>
 
 export type SesNotificationServiceConfig = {
     nodemailerConfig: NodemailerConfig
@@ -51,7 +51,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
     constructor(
         { logger }: InjectedDependencies,
         options: SesNotificationServiceConfig,
-        sesClient: SESClient = new SESClient(...options?.sesClientConfig ?? []),
+        sesClient: SESClient = new SESClient(options?.sesClientConfig ?? []),
         transporter: Transporter<SentMessageInfo> = nodemailer.createTransport({
             SES: { ses: sesClient, aws: { SendRawEmailCommand } }
         })
