@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from '@jest/globals'
 import path from 'path'
-import { TemplateManager, TemplateError, LocalTemplateProvider } from '../templates'
+import { TemplateManager, TemplateError } from '../templates'
+import { LocalTemplateProvider } from '../local-template-provider'
 
 const FIXTURES_DIR = path.join(__dirname, '../../../__fixtures__/templates')
 

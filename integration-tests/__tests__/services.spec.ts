@@ -2,15 +2,22 @@ import { describe, expect, it, jest, beforeEach } from '@jest/globals'
 import { testService } from "../../src/__fixtures__/testService"
 import { newMockTransporter } from "../../src/__mocks__/mockTransporter"
 import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand, VerifyEmailIdentityCommandInput, GetIdentityVerificationAttributesCommandInput } from '@aws-sdk/client-ses'
+import { GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3'
 import { mockClient } from 'aws-sdk-client-mock'
 import { MedusaError } from '@medusajs/framework/utils'
+import path from 'path'
+import { LocalTemplateProvider } from '../../src/providers/ses/local-template-provider'
+import { S3TemplateProvider } from '../../src/providers/ses/s3-template-provider'
+import type { StreamingBlobPayloadOutputTypes } from '@smithy/types'
 
 const sesMock = mockClient(SESClient)
+const s3Mock = mockClient(S3Client)
 
 jest.setTimeout(10_000)
 
 beforeEach(() => {
     sesMock.reset()
+    s3Mock.reset()
 })
 
 const testNotification = () => ({
@@ -289,6 +296,162 @@ describe("SES notification provider", () => {
                 }
             })
         )
+    })
+
+    describe("Local Template Provider Integration", () => {
+        const FIXTURES_DIR = path.join(__dirname, '../../src/__fixtures__/templates')
+
+        it("should render template from local provider", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            transporter.sendMailReturns({ messageId: 'test-id' })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+            })
+
+            await service.send({
+                ...notification,
+                template: "welcome-email",
+                data: {
+                    firstName: "John",
+                    email: "john@example.com",
+                    companyName: "Test Corp",
+                    hasPromo: false
+                },
+                content: {
+                    subject: "Welcome Email"
+                }
+            })
+
+            expect(transporter.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    html: expect.stringContaining("Welcome John!"),
+                    subject: "Welcome Email"
+                })
+            )
+        })
+
+        it("should throw error if local template not found", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+            })
+
+            await expect(service.send({
+                ...notification,
+                template: "non-existent-template",
+                data: {},
+                content: {
+                    subject: "Test"
+                }
+            })).rejects.toThrow("SesNotificationService: Template 'non-existent-template' not found")
+        })
+    })
+
+    describe("S3 Template Provider Integration", () => {
+        const S3_BUCKET = 'test-bucket'
+        const S3_PREFIX = 'templates/'
+
+        beforeEach(() => {
+            s3Mock.on(ListObjectsV2Command).resolves({ CommonPrefixes: [{ Prefix: S3_PREFIX + 'welcome-email/' }] })
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/handlebars.template.html' }).resolves({ Body: { transformToString: () => Promise.resolve('S3 Template Content: Welcome {{firstName}}!') } as StreamingBlobPayloadOutputTypes })
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/data.schema.json' }).resolves({ Body: { transformToString: () => Promise.resolve(JSON.stringify({ type: 'object', properties: { firstName: { type: 'string' } }, required: ['firstName'], additionalProperties: false })) } as StreamingBlobPayloadOutputTypes})
+        })
+
+        it("should render template from S3 provider", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            transporter.sendMailReturns({ messageId: 'test-id' })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                templateProvider: new S3TemplateProvider({
+                    clientConfig: { region: 'us-east-1' },
+                    bucket: S3_BUCKET,
+                    prefix: S3_PREFIX
+                })
+            })
+
+            await service.send({
+                ...notification,
+                template: "welcome-email",
+                data: {
+                    firstName: "John",
+                },
+                content: {
+                    subject: "S3 Welcome Email"
+                }
+            })
+
+            expect(transporter.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    html: expect.stringContaining("S3 Template Content: Welcome John!"),
+                    subject: "S3 Welcome Email"
+                })
+            )
+        })
+
+        it("should throw error if S3 template not found", async () => {
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+            transporter.sendMailReturns({ messageId: 'test-id' })
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                templateProvider: new S3TemplateProvider({
+                    clientConfig: { region: 'us-east-1' },
+                    bucket: S3_BUCKET,
+                    prefix: S3_PREFIX
+                })
+            })
+
+            await expect(service.send({
+                ...notification,
+                template: "non-existent-s3-template",
+                data: {},
+                content: {
+                    subject: "Test"
+                }
+            })).rejects.toThrow("SesNotificationService: Template 'non-existent-s3-template' not found")
+        })
+
+        it("should throw error if S3 template data validation fails", async () => {
+            // Mock S3 to return a template but with a schema that requires 'firstName'
+            s3Mock.on(ListObjectsV2Command).resolves({ CommonPrefixes: [{ Prefix: S3_PREFIX + 'welcome-email/' }] })
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/handlebars.template.html' }).resolves({ Body: { transformToString: () => Promise.resolve('S3 Template Content: Welcome {{firstName}}!') }as StreamingBlobPayloadOutputTypes })
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/data.schema.json' }).resolves({ Body: { transformToString: () => Promise.resolve(JSON.stringify({ type: 'object', properties: { firstName: { type: 'string' } }, required: ['firstName'], additionalProperties: false })) } as StreamingBlobPayloadOutputTypes})
+
+            const notification = testNotification()
+            const transporter = newMockTransporter()
+
+            const service = testService(transporter, {
+                from: "source@e.g",
+            }, {
+                templateProvider: new S3TemplateProvider({
+                    clientConfig: { region: 'us-east-1' },
+                    bucket: S3_BUCKET,
+                    prefix: S3_PREFIX
+                })
+            })
+
+            await expect(service.send({
+                ...notification,
+                template: "welcome-email",
+                data: { /* missing firstName */ },
+                content: {
+                    subject: "Test"
+                }
+            })).rejects.toThrow(/Template data validation failed for 'welcome-email': root: must have required property 'firstName'/)
+        })
     })
 
     describe("Sandbox Mode", () => {

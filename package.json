@@ -50,10 +50,12 @@
     "medusa-provider-ses"
   ],
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.844.0",
+    "@aws-sdk/client-ses": "^3.821.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "@aws-sdk/client-ses": "^3.821.0",
-    "nodemailer": "^6.9.12",
-    "handlebars": "^4.7.8"
+    "aws-sdk-client-mock-jest": "^4.1.0",
+    "handlebars": "^4.7.8",
+    "nodemailer": "^6.9.12"
   }
 }
