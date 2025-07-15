@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/bkosm/medusa-notification-ses/compare/v1.0.0...v1.0.1) (2025-07-15)
+
+
+### Bug Fixes
+
+* ses: auth config via options ([7035d25](https://github.com/bkosm/medusa-notification-ses/commit/7035d258373294354054fb596e4796631a03160f))
+
 # 1.0.0 (2025-06-25)
 
 
