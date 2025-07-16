@@ -1,5 +1,5 @@
 import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand } from '@aws-sdk/client-ses'
-import { error } from './utils'
+import { providerError } from './utils'
 
 export interface SandboxConfig {
   // Presence of object enables sandbox mode
@@ -93,7 +93,7 @@ export class SandboxManager {
 
     // Throw retryable error for Medusa's workflow system
     const addressList = stillUnverified.join(', ')
-    throw error(
+    throw providerError(
       'INVALID_DATA',
       `Email verification pending for sandbox mode: ${addressList}`
     )

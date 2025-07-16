@@ -1,7 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from '@jest/globals'
 import path from 'path'
 import fs from 'fs/promises'
-import { TemplateError } from '../templates'
 import { LocalTemplateProvider } from '../local-template-provider'
 
 const FIXTURES_DIR = path.join(__dirname, '../../../__fixtures__/templates')
@@ -24,17 +23,15 @@ describe('LocalTemplateProvider', () => {
       expect(ids).toHaveLength(2)
     })
 
-    it('should throw TemplateError for a non-existent directory', async () => {
+    it('should throw for a non-existent directory', async () => {
       const provider = new LocalTemplateProvider(path.join(FIXTURES_DIR, 'non-existent'))
-      await expect(provider.listIds()).rejects.toThrow(TemplateError)
-      await expect(provider.listIds()).rejects.toThrow('Templates directory does not exist')
+      await expect(provider.listIds()).rejects.toThrow(/SesNotificationService: LocalTemplateProvider: Directory error: ENOENT:.*/)
     })
 
-    it('should throw TemplateError if the path is a file', async () => {
+    it('should throw if the path is a file', async () => {
         const filePath = path.join(TEMP_TEST_DIR, 'file.txt')
         await fs.writeFile(filePath, 'hello')
         const provider = new LocalTemplateProvider(filePath)
-        await expect(provider.listIds()).rejects.toThrow(TemplateError)
         await expect(provider.listIds()).rejects.toThrow('Templates path is not a directory')
     })
 
@@ -42,7 +39,6 @@ describe('LocalTemplateProvider', () => {
         const emptyDirPath = path.join(TEMP_TEST_DIR, 'empty-dir')
         await fs.mkdir(emptyDirPath, { recursive: true })
         const provider = new LocalTemplateProvider(emptyDirPath)
-        await expect(provider.listIds()).rejects.toThrow(TemplateError)
         await expect(provider.listIds()).rejects.toThrow('No template directories found')
     })
   })
@@ -64,8 +60,7 @@ describe('LocalTemplateProvider', () => {
         // Create only the schema file
         await fs.writeFile(path.join(missingTemplatePath, 'data.schema.json'), '{}')
         const provider = new LocalTemplateProvider(TEMP_TEST_DIR)
-        await expect(provider.getFiles('missing-template')).rejects.toThrow(TemplateError)
-        await expect(provider.getFiles('missing-template')).rejects.toThrow(/File not found: .*handlebars.template.html/)
+        await expect(provider.getFiles('missing-template')).rejects.toThrow(/SesNotificationService: LocalTemplateProvider: File error: ENOENT: .*/)
     })
 
     it('should throw TemplateError if schema file is missing', async () => {
@@ -74,12 +69,11 @@ describe('LocalTemplateProvider', () => {
         // Create only the template file
         await fs.writeFile(path.join(missingSchemaPath, 'handlebars.template.html'), 'hello')
         const provider = new LocalTemplateProvider(TEMP_TEST_DIR)
-        await expect(provider.getFiles('missing-schema')).rejects.toThrow(TemplateError)
-        await expect(provider.getFiles('missing-schema')).rejects.toThrow(/File not found: .*data.schema.json/)
+        await expect(provider.getFiles('missing-schema')).rejects.toThrow(/SesNotificationService: LocalTemplateProvider: File error: ENOENT:.*/)
     })
 
     it('should throw TemplateError for a non-existent template ID', async () => {
-        await expect(provider.getFiles('non-existent-id')).rejects.toThrow(TemplateError)
+        await expect(provider.getFiles('non-existent-id')).rejects.toThrow(/SesNotificationService: LocalTemplateProvider: File error: ENOENT/)
     })
   })
 })

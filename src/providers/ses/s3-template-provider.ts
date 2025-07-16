@@ -1,5 +1,6 @@
 import { S3Client, ListObjectsV2Command, GetObjectCommand, S3ClientConfig } from '@aws-sdk/client-s3'
-import { TemplateProvider, TemplateError } from './templates'
+import { TemplateProvider } from './templates'
+import { providerError } from './utils'
 
 export interface S3TemplateProviderConfig {
   clientConfig?: S3ClientConfig
@@ -26,11 +27,14 @@ export class S3TemplateProvider implements TemplateProvider {
       const response = await this.s3.send(command)
       const ids = response.CommonPrefixes?.map(p => p.Prefix!.replace(this.prefix, '').replace(/\/$/, '')) || []
       if (ids.length === 0) {
-        throw new TemplateError(`No template directories found in S3 bucket: ${this.bucket}, prefix: ${this.prefix}`)
+        throw new Error(`No template directories found in bucket: ${this.bucket}, prefix: ${this.prefix}`)
       }
       return ids
-    } catch (error) {
-      throw new TemplateError(`Failed to list templates from S3: ${error.message}`, undefined, error)
+    } catch (err) {
+      throw providerError(
+        'UNEXPECTED_STATE',
+        `S3TemplateProvider: Failed to list templates from S3: ${err.message}`,
+      )
     }
   }
 
@@ -44,8 +48,11 @@ export class S3TemplateProvider implements TemplateProvider {
         this.getObject(schemaKey),
       ])
       return { template, schema }
-    } catch (error) {
-      throw new TemplateError(`Failed to get files for template ${id} from S3: ${error.message}`, id, error)
+    } catch (err) {
+      throw providerError(
+        'UNEXPECTED_STATE',
+        `S3TemplateProvider: Failed to get files for template ${id} from S3: ${err.message}`,
+      )
     }
   }
 
@@ -57,8 +64,11 @@ export class S3TemplateProvider implements TemplateProvider {
       })
       const response = await this.s3.send(command)
       return response.Body!.transformToString()
-    } catch (error) {
-      throw new Error(`Failed to get object ${key} from S3: ${error.message}`)
+    } catch (err) {
+      throw providerError(
+        'UNEXPECTED_STATE',
+        `S3TemplateProvider: Failed to get object ${key} from S3: ${err.message}`,
+      )
     }
   }
 }

@@ -4,7 +4,6 @@ import type { StreamingBlobPayloadOutputTypes } from '@smithy/types'
 import { mockClient } from 'aws-sdk-client-mock'
 
 import { S3TemplateProvider } from '../s3-template-provider'
-import { TemplateError } from '../templates'
 
 // Mock the S3Client using aws-sdk-client-mock
 const s3Mock = mockClient(S3Client)
@@ -30,14 +29,12 @@ describe('S3TemplateProvider', () => {
     it('should throw TemplateError if no templates are found', async () => {
       s3Mock.on(ListObjectsV2Command).resolves({ CommonPrefixes: [] })
       const provider = new S3TemplateProvider(config)
-      await expect(provider.listIds()).rejects.toThrow(TemplateError)
-      await expect(provider.listIds()).rejects.toThrow('No template directories found in S3 bucket')
+      await expect(provider.listIds()).rejects.toThrow('SesNotificationService: S3TemplateProvider: Failed to list templates from S3: No template directories found in bucket: test-bucket, prefix: templates/')
     })
 
     it('should throw TemplateError on S3 client error', async () => {
       s3Mock.on(ListObjectsV2Command).rejects(new Error('S3 Error'))
       const provider = new S3TemplateProvider(config)
-      await expect(provider.listIds()).rejects.toThrow(TemplateError)
       await expect(provider.listIds()).rejects.toThrow('Failed to list templates from S3: S3 Error')
     })
   })
@@ -57,7 +54,6 @@ describe('S3TemplateProvider', () => {
     it('should throw TemplateError on S3 client error', async () => {
       s3Mock.on(GetObjectCommand).rejects(new Error('S3 Error'))
       const provider = new S3TemplateProvider(config)
-      await expect(provider.getFiles('welcome-email')).rejects.toThrow(TemplateError)
       await expect(provider.getFiles('welcome-email')).rejects.toThrow('Failed to get files for template welcome-email from S3')
     })
   })
