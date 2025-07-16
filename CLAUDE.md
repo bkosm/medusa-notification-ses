@@ -4,7 +4,7 @@ This is a Medusa notification provider for AWS SES (Simple Email Service). It en
 
 ## Development Commands
 
-- `npm test` - Run unit tests for src directory
+- `npm test` - Run unit tests
 - `npm run test:integration` - Run integration tests with cleanup
 - `npm run build` - Clean and build TypeScript to dist directory
 - `npm run watch` - Watch mode for TypeScript compilation
@@ -18,14 +18,14 @@ The provider follows Medusa's notification provider pattern:
 - `src/providers/ses/adapter.ts` - Main `SesNotificationService` class implementing `AbstractNotificationProviderService`
 - `src/providers/ses/sandbox.ts` - `SandboxManager` class for SES sandbox mode email verification
 - `src/providers/ses/templates.ts` - `TemplateManager` class for email template rendering, uses a `TemplateProvider`.
-- `src/providers/ses/local-template-provider.ts` - Template provider for loading from the local filesystem.
-- `src/providers/ses/s3-template-provider.ts` - Template provider for loading from S3.
+- `src/providers/ses/template-providers/local.ts` - Template provider for loading from the local filesystem.
+- `src/providers/ses/template-providers/s3.ts` - Template provider for loading from S3.
 - `src/providers/ses/utils.ts` - Shared utilities including error handling
 - `src/providers/ses/index.ts` - Module provider export setup
 - `integration-tests/` - Integration tests with mocked nodemailer and SES
 - `src/__fixtures__` - Test helpers
 - `src/__mocks__` - Test mocks
-- `src/providers/ses/__tests__` - Unit tests for the provider
+- `src/providers/ses/*.test.ts` - Unit tests for the provider
 
 ### Key Implementation Details
 
