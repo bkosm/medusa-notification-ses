@@ -17,7 +17,9 @@ The provider follows Medusa's notification provider pattern:
 
 - `src/providers/ses/adapter.ts` - Main `SesNotificationService` class implementing `AbstractNotificationProviderService`
 - `src/providers/ses/sandbox.ts` - `SandboxManager` class for SES sandbox mode email verification
-- `src/providers/ses/templates.ts` - `TemplateManager` class for email template rendering
+- `src/providers/ses/templates.ts` - `TemplateManager` class for email template rendering, uses a `TemplateProvider`.
+- `src/providers/ses/local-template-provider.ts` - Template provider for loading from the local filesystem.
+- `src/providers/ses/s3-template-provider.ts` - Template provider for loading from S3.
 - `src/providers/ses/utils.ts` - Shared utilities including error handling
 - `src/providers/ses/index.ts` - Module provider export setup
 - `integration-tests/` - Integration tests with mocked nodemailer and SES
@@ -32,22 +34,27 @@ The provider follows Medusa's notification provider pattern:
 - Handles attachments by mapping Medusa's attachment format to nodemailer format
 - Configuration split between `sesClientConfig` (SES client config), `nodemailerConfig` (static nodemailer options), and `sandboxConfig` (sandbox mode)
 - Constructor accepts optional transporter parameter for dependency injection and testing
-- **Template Support**: Optional email templating with Handlebars and JSON schema validation via `templatesConfig`
+- **Template Support**: Optional email templating with Handlebars and JSON schema validation via a pluggable `templateProvider` (e.g., `LocalTemplateProvider`, `S3TemplateProvider`)
 - **Sandbox Mode**: Automatic email address verification for SES sandbox environments with Medusa workflow retry integration
 
 ### Configuration Types
 
-- `SesNotificationServiceConfig` - Main config with optional `sesClientConfig`, `nodemailerConfig`, `templatesConfig`, and `sandboxConfig` fields
+- `SesNotificationServiceConfig` - Main config with optional `sesClientConfig`, `nodemailerConfig`, `templateProvider`, and `sandboxConfig` fields
 - `NodemailerConfig` - Omits core email fields (subject, text, html) from SendMailOptions and passes them through to core nodemailer API call
 - `SesClientConfig` - AWS SES client configuration directly used in the v3 SDK constructor
-- `TemplatesConfig` - Template configuration with `directory` field pointing to pre-compiled template directory structure
+- `TemplateProvider` - Interface for template providers. Implementations include `LocalTemplateProvider` and `S3TemplateProvider`.
 - `SandboxConfig` - Sandbox mode configuration (empty object enables sandbox mode)
 
 ### Template System
 
-The provider supports optional email templating through a clean, performant architecture:
+The provider supports optional email templating through a pluggable provider architecture. The `TemplateManager` uses a `TemplateProvider` instance (passed in the service config) to load templates.
+
+#### Template Providers
+- **`LocalTemplateProvider`**: Loads templates from a specified directory on the local filesystem.
+- **`S3TemplateProvider`**: Loads templates from an AWS S3 bucket, allowing for dynamic updates without redeploying the application.
 
 #### Template Directory Structure
+Both providers expect the same directory structure. Each template has its own folder, named with the template ID.
 ```
 templates/
 ├── welcome-email/
@@ -59,19 +66,19 @@ templates/
 ```
 
 #### Template Processing Flow
-1. **Initialization**: Templates loaded and validated at service startup
-2. **Runtime**: When `notification.content.template` is provided:
-   - Template ID validated against available templates
-   - Data validated against template's JSON schema
-   - Handlebars template rendered with provided data
-   - Rendered HTML replaces `notification.content.html`
+1. **Initialization**: The `TemplateManager` is initialized with a `TemplateProvider`. Templates are loaded and validated on service startup.
+2. **Runtime**: When `notification.template` is provided:
+   - Template ID is validated against available templates.
+   - Data is validated against the template's JSON schema.
+   - Handlebars template is rendered with provided data.
+   - Rendered HTML replaces `notification.content.html`.
 
 #### Key Features
-- **Performance**: MJML pre-compilation at build time, only Handlebars rendering at runtime
-- **Validation**: Comprehensive JSON schema validation prevents template rendering errors
-- **Caching**: Templates and schemas cached in memory after initial load
-- **Error Handling**: Clear error messages for missing templates, invalid data, and rendering failures
-- **Backward Compatibility**: Templates are completely optional - existing code continues to work unchanged
+- **Pluggable**: Easily switch between local and S3 templates, or create a custom provider.
+- **Performance**: Templates and schemas are cached in memory after the initial load.
+- **Validation**: Comprehensive JSON schema validation prevents template rendering errors.
+- **Error Handling**: Clear error messages for missing templates, invalid data, and rendering failures.
+- **Backward Compatibility**: The templating feature is entirely optional. If no `templateProvider` is configured, the system works as before.
 
 ### Sandbox System
 
@@ -100,6 +107,7 @@ The provider supports SES sandbox mode for development environments with automat
 
 ## Key Dependencies
 
+- `@aws-sdk/client-s3` - AWS S3 SDK v3 for the S3 template provider
 - `@aws-sdk/client-ses` - AWS SES SDK v3
 - `@medusajs/framework` - Medusa framework types and utilities
 - `nodemailer` - Email transport with SES support
