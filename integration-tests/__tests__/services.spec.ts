@@ -309,7 +309,7 @@ describe("SES notification provider", () => {
                         from: "",
                     },
                     {
-                        templateProvider: new LocalTemplateProvider('./reserved-invalid-dir')
+                        templateProvider: new LocalTemplateProvider({ directory: './reserved-invalid-dir' })
                     }
                 )
 
@@ -325,7 +325,7 @@ describe("SES notification provider", () => {
             const service = testService(transporter, {
                 from: "source@e.g",
             }, {
-                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+                templateProvider: new LocalTemplateProvider({ directory: FIXTURES_DIR })
             })
 
             await service.send({
@@ -357,7 +357,7 @@ describe("SES notification provider", () => {
             const service = testService(transporter, {
                 from: "source@e.g",
             }, {
-                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+                templateProvider: new LocalTemplateProvider({ directory: FIXTURES_DIR })
             })
 
             await expect(service.send({

@@ -18,7 +18,7 @@ describe('TemplateManager', () => {
     })
 
     it('should create manager with valid provider', () => {
-      const provider = new LocalTemplateProvider(FIXTURES_DIR)
+      const provider = new LocalTemplateProvider({ directory: FIXTURES_DIR })
       const manager = TemplateManager.create(provider)
       expect(manager).toBeInstanceOf(TemplateManager)
     })
@@ -28,7 +28,7 @@ describe('TemplateManager', () => {
     let manager: TemplateManager
 
     beforeEach(() => {
-      const provider = new LocalTemplateProvider(FIXTURES_DIR)
+      const provider = new LocalTemplateProvider({ directory: FIXTURES_DIR })
       manager = TemplateManager.create(provider)!
     })
 
@@ -53,7 +53,7 @@ describe('TemplateManager', () => {
     let manager: TemplateManager
 
     beforeEach(() => {
-      const provider = new LocalTemplateProvider(FIXTURES_DIR)
+      const provider = new LocalTemplateProvider({ directory: FIXTURES_DIR })
       manager = TemplateManager.create(provider)!
     })
 
@@ -67,7 +67,7 @@ describe('TemplateManager', () => {
       }
 
       const html = await manager.renderTemplate('welcome-email', data)
-      
+
       expect(html).toContain('Welcome John!')
       expect(html).toContain('john@example.com')
       expect(html).toContain('Acme Corp')
@@ -83,7 +83,7 @@ describe('TemplateManager', () => {
       }
 
       const html = await manager.renderTemplate('welcome-email', data)
-      
+
       expect(html).toContain('Welcome Jane!')
       expect(html).toContain('jane@example.com')
       expect(html).toContain('Test Inc')
@@ -103,7 +103,7 @@ describe('TemplateManager', () => {
       }
 
       const html = await manager.renderTemplate('order-confirmation', data)
-      
+
       expect(html).toContain('Hi Alice')
       expect(html).toContain('ORD-123')
       expect(html).toContain('Widget A')
