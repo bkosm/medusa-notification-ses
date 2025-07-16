@@ -2,32 +2,29 @@ import { S3Client, ListObjectsV2Command, GetObjectCommand, S3ClientConfig } from
 import { TemplateProvider } from './templates'
 import { providerError } from './utils'
 
-export interface S3TemplateProviderConfig {
+export interface S3TemplateProviderOptions {
   clientConfig?: S3ClientConfig
   bucket: string
   prefix?: string
 }
 
 export class S3TemplateProvider implements TemplateProvider {
-  private bucket: string
-  private prefix: string
-
-  constructor(config: S3TemplateProviderConfig, private s3: S3Client = new S3Client(config.clientConfig ?? [])) {
-    this.bucket = config.bucket
-    this.prefix = config.prefix || ''
-  }
+  constructor(
+    private options: S3TemplateProviderOptions,
+    private s3: S3Client = new S3Client(options.clientConfig ?? [])
+  ) { }
 
   async listIds(): Promise<string[]> {
     try {
       const command = new ListObjectsV2Command({
-        Bucket: this.bucket,
-        Prefix: this.prefix,
+        Bucket: this.options.bucket,
+        Prefix: this.options.prefix,
         Delimiter: '/',
       })
       const response = await this.s3.send(command)
-      const ids = response.CommonPrefixes?.map(p => p.Prefix!.replace(this.prefix, '').replace(/\/$/, '')) || []
+      const ids = response.CommonPrefixes?.map(p => p.Prefix!.replace(this.options.prefix ?? '', '').replace(/\/$/, '')) || []
       if (ids.length === 0) {
-        throw new Error(`No template directories found in bucket: ${this.bucket}, prefix: ${this.prefix}`)
+        throw new Error(`No template directories found in bucket: ${this.options.bucket}, prefix: ${this.options.prefix}`)
       }
       return ids
     } catch (err) {
@@ -39,8 +36,13 @@ export class S3TemplateProvider implements TemplateProvider {
   }
 
   async getFiles(id: string): Promise<{ template: string; schema: string }> {
-    const templateKey = `${this.prefix}${id}/handlebars.template.html`
-    const schemaKey = `${this.prefix}${id}/data.schema.json`
+    let normalizedPrefix = this.options.prefix ?? ''
+    if (normalizedPrefix && !normalizedPrefix.endsWith('/')) {
+      normalizedPrefix = `${normalizedPrefix}/`
+    }
+
+    const templateKey = `${this.options.prefix}${id}/handlebars.template.html`
+    const schemaKey = `${this.options.prefix}${id}/data.schema.json`
 
     try {
       const [template, schema] = await Promise.all([
@@ -59,7 +61,7 @@ export class S3TemplateProvider implements TemplateProvider {
   private async getObject(key: string): Promise<string> {
     try {
       const command = new GetObjectCommand({
-        Bucket: this.bucket,
+        Bucket: this.options.bucket,
         Key: key,
       })
       const response = await this.s3.send(command)
