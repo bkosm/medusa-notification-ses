@@ -265,8 +265,9 @@ Only `subject`, `text` and `html` are substituted for runtime values at all time
 
 An instance of a template provider (optional). If not provided, the templating feature is disabled. This provider is responsible for loading and caching templates.
 
-- `LocalTemplateProvider(directory: string)`: Loads templates from the local filesystem.
-- `S3TemplateProvider(config: S3TemplateProviderConfig)`: Loads templates from an S3 bucket.
+- `LocalTemplateProvider`: Loads templates from the local filesystem.
+  - `directory`: path to a local directory with expected templates structure
+- `S3TemplateProvider`: Loads templates from an S3 bucket.
   - `clientConfig`: AWS S3 client configuration.
   - `bucket`: The S3 bucket name.
   - `prefix`: An optional key prefix for the templates within the bucket.
