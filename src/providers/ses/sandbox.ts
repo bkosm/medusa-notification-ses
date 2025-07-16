@@ -1,26 +1,16 @@
 import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand } from '@aws-sdk/client-ses'
 import { providerError } from './utils'
 
+// Presence of object enables sandbox mode
 export interface SandboxConfig {
-  // Presence of object enables sandbox mode
   verifyOnEachSend?: boolean
-}
-
-export class SandboxError extends Error {
-  constructor(message: string, public emailAddress?: string, public cause?: Error) {
-    super(message)
-    this.name = 'SandboxError'
-  }
 }
 
 export class SandboxManager {
   private verifiedAddresses = new Map<string, boolean>()
   private pendingVerifications = new Set<string>()
-  private verifyOnEachSend: boolean
 
-  private constructor(private sesClient: SESClient, verifyOnEachSend: boolean = false) {
-    this.verifyOnEachSend = verifyOnEachSend
-  }
+  constructor(private sesClient: SESClient, private verifyOnEachSend: boolean = false) {}
 
   static create(config?: SandboxConfig, sesClient?: SESClient): SandboxManager | null {
     if (!config || !sesClient) {
@@ -119,11 +109,10 @@ export class SandboxManager {
           statusMap.set(address, isVerified)
         }
       }
-    } catch (error) {
-      throw new SandboxError(
-        `Failed to check email verification status: ${error instanceof Error ? error.message : String(error)}`,
-        undefined,
-        error instanceof Error ? error : undefined
+    } catch (err) {
+      throw providerError(
+        'UNEXPECTED_STATE',
+        `SandboxManager: Failed to check email verification status: ${err.message}`
       )
     }
     
