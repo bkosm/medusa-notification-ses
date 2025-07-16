@@ -14,7 +14,7 @@ npm install @bkosm/medusa-notification-ses
 Register the provider in your Medusa project:
 
 ```typescript
-import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses'
+import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses/template-providers'
 
 export default defineConfig({
   modules: [
@@ -78,7 +78,7 @@ This provider loads templates from the local filesystem.
 #### Configuration
 
 ```typescript
-import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses'
+import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses/template-providers'
 
 // ...
   // Path to your templates directory
@@ -161,7 +161,7 @@ This provider loads templates from an S3 bucket. This is useful for production e
 #### Configuration
 
 ```typescript
-import { S3TemplateProvider } from '@bkosm/medusa-notification-ses'
+import { S3TemplateProvider } from '@bkosm/medusa-notification-ses/template-providers'
 
 // ...
   templateProvider: new S3TemplateProvider({
