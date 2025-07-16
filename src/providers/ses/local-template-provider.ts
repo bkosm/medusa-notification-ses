@@ -3,14 +3,18 @@ import path from 'path'
 import { TemplateProvider } from './templates'
 import { providerError } from './utils'
 
+export type LocalTemplateProviderOptions = {
+  directory: string
+}
+
 export class LocalTemplateProvider implements TemplateProvider {
-  constructor(private directory: string) { }
+  constructor(private options: LocalTemplateProviderOptions) { }
 
   private async checkDirectoryExists(): Promise<void> {
     try {
-      const stats = await fs.stat(this.directory)
+      const stats = await fs.stat(this.options.directory)
       if (!stats.isDirectory()) {
-        throw new Error(`Templates path is not a directory: ${this.directory}`)
+        throw new Error(`Templates path is not a directory: ${this.options.directory}`)
       }
     } catch (err) {
       throw providerError(
@@ -22,7 +26,7 @@ export class LocalTemplateProvider implements TemplateProvider {
 
   async listIds(): Promise<string[]> {
     await this.checkDirectoryExists()
-    const dirents = await fs.readdir(this.directory, { withFileTypes: true })
+    const dirents = await fs.readdir(this.options.directory, { withFileTypes: true })
     const templateIds = dirents
       .filter((dirent) => dirent.isDirectory())
       .map((dirent) => dirent.name)
@@ -30,7 +34,7 @@ export class LocalTemplateProvider implements TemplateProvider {
     if (templateIds.length === 0) {
       throw providerError(
         'INVALID_DATA',
-        `LocalTemplateProvider: No template directories found in: ${this.directory}`,
+        `LocalTemplateProvider: No template directories found in: ${this.options.directory}`,
       )
     }
 
@@ -38,7 +42,7 @@ export class LocalTemplateProvider implements TemplateProvider {
   }
 
   async getFiles(id: string): Promise<{ template: string; schema: string }> {
-    const templateDir = path.join(this.directory, id)
+    const templateDir = path.join(this.options.directory, id)
     const templatePath = path.join(templateDir, 'handlebars.template.html')
     const schemaPath = path.join(templateDir, 'data.schema.json')
 

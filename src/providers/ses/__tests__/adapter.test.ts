@@ -72,7 +72,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+                templateProvider: new LocalTemplateProvider({ directory: FIXTURES_DIR })
             })
 
             await service.send({
@@ -128,7 +128,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+                templateProvider: new LocalTemplateProvider({ directory: FIXTURES_DIR })
             })
 
             await expect(service.send({
@@ -147,7 +147,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+                templateProvider: new LocalTemplateProvider({ directory: FIXTURES_DIR })
             })
 
             await expect(service.send({
@@ -171,7 +171,7 @@ describe("SesNotificationService", () => {
             const service = testService(transporter, {
                 from: '',
             }, {
-                templateProvider: new LocalTemplateProvider(FIXTURES_DIR)
+                templateProvider: new LocalTemplateProvider({ directory: FIXTURES_DIR })
             })
 
             await service.send({
