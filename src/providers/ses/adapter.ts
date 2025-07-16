@@ -16,7 +16,7 @@ import { TemplateManager, TemplateProvider } from "./templates"
 import { SandboxManager, SandboxConfig } from "./sandbox"
 import { providerError } from "./utils"
 
-type InjectedDependencies = {
+export type InjectedDependencies = {
     logger: Logger
 }
 
@@ -41,28 +41,22 @@ export type SesNotificationServiceConfig = {
 
 export class SesNotificationService extends AbstractNotificationProviderService {
     static identifier = "notification-ses"
-
-    protected config_: SesNotificationServiceConfig
-    protected logger_: Logger
-    protected transporter_: Transporter<SentMessageInfo>
     
     templateManager: TemplateManager | null
     sandboxManager: SandboxManager | null
 
     constructor(
-        { logger }: InjectedDependencies,
-        options: SesNotificationServiceConfig,
-        sesClient: SESClient = new SESClient(options?.sesClientConfig ?? []),
-        transporter: Transporter<SentMessageInfo> = nodemailer.createTransport({
+        // @ts-ignore
+        public _deps: InjectedDependencies,
+        public config: SesNotificationServiceConfig,
+        sesClient: SESClient = new SESClient(config?.sesClientConfig ?? []),
+        public transporter: Transporter<SentMessageInfo> = nodemailer.createTransport({
             SES: { ses: sesClient, aws: { SendRawEmailCommand } }
         })
     ) {
         super()
-        this.config_ = options
-        this.logger_ = logger
-        this.transporter_ = transporter
-        this.templateManager = TemplateManager.create(options.templateProvider)
-        this.sandboxManager = SandboxManager.create(options.sandboxConfig, sesClient)
+        this.templateManager = TemplateManager.create(config.templateProvider)
+        this.sandboxManager = SandboxManager.create(config.sandboxConfig, sesClient)
     }
 
     async send(
@@ -111,7 +105,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
             }
         }
 
-        const staticOptions = this.config_.nodemailerConfig
+        const staticOptions = this.config.nodemailerConfig
 
         const dynamicAttachments = notification.attachments?.map<NodemailerAttachment>(at => ({
             cid: at.id,
@@ -143,7 +137,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         }
 
         try {
-            const response = await this.transporter_.sendMail(mailOptions)
+            const response = await this.transporter.sendMail(mailOptions)
             return { id: response.messageId }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : 'unknown'
