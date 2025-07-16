@@ -14,6 +14,8 @@ npm install @bkosm/medusa-notification-ses
 Register the provider in your Medusa project:
 
 ```typescript
+import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses'
+
 export default defineConfig({
   modules: [
     {
@@ -29,9 +31,8 @@ export default defineConfig({
               nodemailerConfig: {
                 from: "noreply@yourdomain.com",
               },
-              templatesConfig: {
-                directory: "./email-templates",
-              },
+              // Use a template provider for email templates (see below)
+              templateProvider: new LocalTemplateProvider("./email-templates"),
               // Enables SES sandbox mode with automatic email address verification
               sandboxConfig: {},
             },
@@ -61,19 +62,35 @@ Enable sandbox mode by defining the `sandboxConfig` option.
 
 To re-request verification on every send, define `sandboxConfig.verifyOnEachSend: false` in the configuration.
 
-## Email Templates
+## Template Providers
 
-The provider has built-in support for handlebars templates to use in your emails.
+The provider has built-in support for handlebars templates through a pluggable provider system. Two providers are included: `LocalTemplateProvider` and `S3TemplateProvider`.
+
 The template system uses a directory-based structure where each template ID maps to a folder containing:
 
-1. **`handlebars.template.html`** - Pre-compiled MJML template with Handlebars placeholders
-2. **`data.schema.json`** - JSON schema for validating template data
+1.  **`handlebars.template.html`** - Pre-compiled MJML template with Handlebars placeholders
+2.  **`data.schema.json`** - JSON schema for validating template data
 
-### Example template setup
+### `LocalTemplateProvider`
 
-Set `templatesConfig.directory` to a resolvable path to `email-templates`.
+This provider loads templates from the local filesystem.
 
-#### `email-templates/welcome-email/handlebars.template.html`
+#### Configuration
+
+```typescript
+import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses'
+
+// ...
+  // Path to your templates directory
+  templateProvider: new LocalTemplateProvider("./email-templates"),
+// ...
+```
+
+#### Example template setup
+
+With the configuration above, your directory structure should look like this:
+
+##### `email-templates/welcome-email/handlebars.template.html`
 
 ```html
 <!DOCTYPE html>
@@ -99,7 +116,7 @@ Set `templatesConfig.directory` to a resolvable path to `email-templates`.
 </html>
 ```
 
-#### `email-templates/welcome-email/data.schema.json`
+##### `email-templates/welcome-email/data.schema.json`
 
 ```json
 {
@@ -137,17 +154,35 @@ Set `templatesConfig.directory` to a resolvable path to `email-templates`.
 }
 ```
 
-Now, you can reference the `welcome-email` template name during a `createNotifications` invocation.
+### `S3TemplateProvider`
+
+This provider loads templates from an S3 bucket. This is useful for production environments where you might want to manage templates centrally without deploying new code.
+
+#### Configuration
+
+```typescript
+import { S3TemplateProvider } from '@bkosm/medusa-notification-ses'
+
+// ...
+  templateProvider: new S3TemplateProvider({
+    clientConfig: { region: 'us-east-1' }, // AWS S3 client config
+    bucket: 'your-s3-bucket-name',
+    prefix: 'email-templates/', // Optional prefix for your templates in the bucket
+  }),
+// ...
+```
+
+The S3 bucket should have the same directory structure as the local provider. For example: `s3://your-s3-bucket-name/email-templates/welcome-email/handlebars.template.html`.
 
 ### Template Processing Flow
 
-1. **Startup**: Templates are loaded and validated when the service initializes
-2. **Runtime**: When sending emails with templates:
-   - Template ID is validated against available templates
-   - Data is validated against the template's JSON schema
-   - Handlebars template is rendered with provided data
-   - Rendered HTML replaces the notification's HTML content
-3. **Caching**: Templates are cached in memory for optimal performance
+1.  **Startup**: Templates are loaded from the configured provider and validated when the service initializes.
+2.  **Runtime**: When sending emails with templates:
+    -   Template ID is validated against available templates.
+    -   Data is validated against the template's JSON schema.
+    -   Handlebars template is rendered with provided data.
+    -   Rendered HTML replaces the notification's HTML content.
+3.  **Caching**: Templates are cached in memory for optimal performance.
 
 ## Usage
 
@@ -226,13 +261,15 @@ Nodemailer send options (`from` is required).
 See the full set of options here: https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/nodemailer/v3/index.d.ts#L104-L177
 Only `subject`, `text` and `html` are substituted for runtime values at all times. Fields like `to`, `attachments` are concatenated with runtime values.
 
-### `templatesConfig`
+### `templateProvider`
 
-Email template configuration (optional):
+An instance of a template provider (optional). If not provided, the templating feature is disabled. This provider is responsible for loading and caching templates.
 
-- `directory` - Path to directory containing template folders
-
-Disables templating feature if the object is not set.
+- `LocalTemplateProvider(directory: string)`: Loads templates from the local filesystem.
+- `S3TemplateProvider(config: S3TemplateProviderConfig)`: Loads templates from an S3 bucket.
+  - `clientConfig`: AWS S3 client configuration.
+  - `bucket`: The S3 bucket name.
+  - `prefix`: An optional key prefix for the templates within the bucket.
 
 ### `sandboxConfig`
 
