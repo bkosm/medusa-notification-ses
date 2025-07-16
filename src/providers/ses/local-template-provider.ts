@@ -8,9 +8,9 @@ export type LocalTemplateProviderOptions = {
 }
 
 export class LocalTemplateProvider implements TemplateProvider {
-  constructor(private options: LocalTemplateProviderOptions) { }
+  constructor(public options: LocalTemplateProviderOptions) { }
 
-  private async checkDirectoryExists(): Promise<void> {
+  async checkDirectoryExists(): Promise<void> {
     try {
       const stats = await fs.stat(this.options.directory)
       if (!stats.isDirectory()) {

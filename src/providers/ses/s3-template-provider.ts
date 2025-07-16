@@ -2,7 +2,7 @@ import { S3Client, ListObjectsV2Command, GetObjectCommand, S3ClientConfig } from
 import { TemplateProvider } from './templates'
 import { providerError } from './utils'
 
-export interface S3TemplateProviderOptions {
+export type S3TemplateProviderOptions = {
   clientConfig?: S3ClientConfig
   bucket: string
   prefix?: string
@@ -10,8 +10,8 @@ export interface S3TemplateProviderOptions {
 
 export class S3TemplateProvider implements TemplateProvider {
   constructor(
-    private options: S3TemplateProviderOptions,
-    private s3: S3Client = new S3Client(options.clientConfig ?? [])
+    public options: S3TemplateProviderOptions,
+    public s3: S3Client = new S3Client(options.clientConfig ?? [])
   ) { }
 
   async listIds(): Promise<string[]> {
@@ -58,7 +58,7 @@ export class S3TemplateProvider implements TemplateProvider {
     }
   }
 
-  private async getObject(key: string): Promise<string> {
+  async getObject(key: string): Promise<string> {
     try {
       const command = new GetObjectCommand({
         Bucket: this.options.bucket,

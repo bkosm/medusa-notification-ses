@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import { newMockTransporter } from "../../../__mocks__/mockTransporter"
 import { testService } from "../../../__fixtures__/testService"
 import path from 'path'
-import { LocalTemplateProvider } from '../local-template-provider'
+import { LocalTemplateProvider } from '..'
 
 // Test the addressesToArray function indirectly through the service
 describe("SesNotificationService", () => {

@@ -9,12 +9,12 @@ import { SESClient, SESClientConfig, SendRawEmailCommand } from "@aws-sdk/client
 import { CheckOptionalClientConfig } from "@smithy/types"
 import * as nodemailer from "nodemailer"
 import type { Transporter, SendMailOptions } from "nodemailer"
-import type { Address, Attachment as NodemailerAttachment } from "nodemailer/lib/mailer"
+import type { Attachment as NodemailerAttachment } from "nodemailer/lib/mailer"
 import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
 
 import { TemplateManager, TemplateProvider } from "./templates"
 import { SandboxManager, SandboxConfig } from "./sandbox"
-import { providerError } from "./utils"
+import { addressesToArray, providerError } from "./utils"
 
 export type InjectedDependencies = {
     logger: Logger
@@ -49,7 +49,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         // @ts-ignore
         public _deps: InjectedDependencies,
         public config: SesNotificationServiceConfig,
-        sesClient: SESClient = new SESClient(config?.sesClientConfig ?? []),
+        public sesClient: SESClient = new SESClient(config?.sesClientConfig ?? []),
         public transporter: Transporter<SentMessageInfo> = nodemailer.createTransport({
             SES: { ses: sesClient, aws: { SendRawEmailCommand } }
         })
@@ -145,28 +145,3 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         }
     }
 }
-
-type AddressLike = string | Address | Array<string | Address> | undefined;
-
-function addressesToArray(addressLikes: AddressLike[]): string[] {
-    return addressLikes.flatMap(addressToArray)
-}
-
-function addressToArray(addressLike: AddressLike): string[] {
-    if (!addressLike) {
-        return []
-    }
-
-    if (typeof addressLike === 'string') {
-        return [addressLike]
-    }
-
-    if (Array.isArray(addressLike)) {
-        return addressLike.map(addr =>
-            typeof addr === 'string' ? addr : addr.address
-        )
-    }
-
-    return [addressLike.address]
-}
-

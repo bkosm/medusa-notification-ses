@@ -1,6 +1,6 @@
 import { SESClient } from "@aws-sdk/client-ses";
 import { MockTransporter } from "../__mocks__/mockTransporter";
-import { NodemailerConfig, SesNotificationService, SesNotificationServiceConfig } from "../providers/ses/adapter";
+import { NodemailerConfig, SesNotificationService, SesNotificationServiceConfig } from "../providers/ses";
 
 export const testService = (
     transporter: MockTransporter, 
