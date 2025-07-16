@@ -14,7 +14,7 @@ import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
 
 import { TemplateManager, TemplateProvider } from "./templates"
 import { SandboxManager, SandboxConfig } from "./sandbox"
-import { error } from "./utils"
+import { providerError } from "./utils"
 
 type InjectedDependencies = {
     logger: Logger
@@ -69,21 +69,21 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         notification: NotificationTypes.ProviderSendNotificationDTO
     ): Promise<NotificationTypes.ProviderSendNotificationResultsDTO> {
         if (!notification) {
-            throw error(
+            throw providerError(
                 'INVALID_ARGUMENT',
                 `Notification is not defined`
             )
         }
 
         if (notification.channel !== 'email') {
-            throw error(
+            throw providerError(
                 'INVALID_ARGUMENT',
                 `Notification is for channel email, got ${notification.channel}`
             )
         }
 
         if (!notification.content) {
-            throw error(
+            throw providerError(
                 'INVALID_DATA',
                 `Notification has no content`
             )
@@ -100,14 +100,14 @@ export class SesNotificationService extends AbstractNotificationProviderService 
 
         if (this.templateManager && templateId) {
             if (!await this.templateManager.hasTemplate(templateId)) {
-                throw error('INVALID_ARGUMENT', `Template '${templateId}' not found`)
+                throw providerError('INVALID_ARGUMENT', `Template '${templateId}' not found`)
             }
 
             try {
                 html = await this.templateManager.renderTemplate(templateId, data)
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : 'unknown'
-                throw error('UNEXPECTED_STATE', `Template rendering failed: ${message}`)
+                throw providerError('UNEXPECTED_STATE', `Template rendering failed: ${message}`)
             }
         }
 
@@ -147,7 +147,7 @@ export class SesNotificationService extends AbstractNotificationProviderService 
             return { id: response.messageId }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : 'unknown'
-            throw error('UNEXPECTED_STATE', `Failed to send email: ${message}`)
+            throw providerError('UNEXPECTED_STATE', `Failed to send email: ${message}`)
         }
     }
 }

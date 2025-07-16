@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from '@jest/globals'
 import path from 'path'
-import { TemplateManager, TemplateError } from '../templates'
+import { TemplateManager } from '../templates'
 import { LocalTemplateProvider } from '../local-template-provider'
 
 const FIXTURES_DIR = path.join(__dirname, '../../../__fixtures__/templates')
@@ -113,26 +113,28 @@ describe('TemplateManager', () => {
     })
 
     it('should throw error for non-existent template', async () => {
-      await expect(manager.renderTemplate('non-existent', {})).rejects.toThrow(TemplateError)
+      await expect(manager.renderTemplate('non-existent', {})).rejects.toThrow(/SesNotificationService: TemplateManager: Template not found: non-existent/)
     })
 
     it('should throw error for invalid data - missing required field', async () => {
       const data = {
+        promoCode: '',
         firstName: 'John',
         // missing email and companyName
       }
 
-      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(/SesNotificationService: TemplateManager: Validation error: root: must have required property 'email'/)
     })
 
     it('should throw error for invalid data - wrong type', async () => {
       const data = {
+        promoCode: '',
         firstName: 123, // should be string
         email: 'john@example.com',
         companyName: 'Acme Corp'
       }
 
-      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(/SesNotificationService: TemplateManager: Validation error: \/firstName: must be string/)
     })
 
     it('should throw error for invalid data - conditional validation', async () => {
@@ -144,7 +146,7 @@ describe('TemplateManager', () => {
         // missing promoCode when hasPromo is true
       }
 
-      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(/SesNotificationService: TemplateManager: Validation error: root: must have required property 'promoCode'/)
     })
 
     it('should throw error for additional properties', async () => {
@@ -155,7 +157,7 @@ describe('TemplateManager', () => {
         extraField: 'not allowed'
       }
 
-      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(TemplateError)
+      await expect(manager.renderTemplate('welcome-email', data)).rejects.toThrow(/SesNotificationService: TemplateManager: Validation error: root: must have required property 'promoCode'/)
     })
   })
 })

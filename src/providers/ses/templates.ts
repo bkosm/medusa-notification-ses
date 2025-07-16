@@ -1,7 +1,7 @@
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import Handlebars from 'handlebars'
-import { error } from './utils'
+import { providerError } from './utils'
 
 export interface TemplateProvider {
   listIds(): Promise<string[]>
@@ -15,20 +15,13 @@ export interface TemplateMetadata {
   validator: ReturnType<Ajv['compile']>
 }
 
-export class TemplateError extends Error {
-  constructor(message: string, public templateId?: string, public cause?: Error) {
-    super(message)
-    this.name = 'TemplateError'
-  }
-}
-
 export class TemplateManager {
   private templates = new Map<string, TemplateMetadata>()
   private ajv = addFormats(new Ajv(), ['email'])
 
   private initPromise: Promise<void> | null | undefined = undefined
 
-  private constructor(private provider: TemplateProvider) { }
+  constructor(private provider: TemplateProvider) { }
 
   static create(provider?: TemplateProvider): TemplateManager | null {
     if (!provider) {
@@ -57,7 +50,7 @@ export class TemplateManager {
       return
     }
 
-    error('UNEXPECTED_STATE', 'TemplateManager: could not finish initialization')
+    throw providerError('UNEXPECTED_STATE', 'TemplateManager: could not finish initialization')
   }
 
   private async loadTemplate(templateId: string): Promise<void> {
@@ -76,12 +69,10 @@ export class TemplateManager {
         schema,
         validator,
       })
-    } catch (error) {
-      throw new TemplateError(
-        `Failed to load template '${templateId}': ${error instanceof Error ? error.message : String(error)
-        }`,
-        templateId,
-        error instanceof Error ? error : undefined
+    } catch (err) {
+      throw providerError(
+        'INVALID_DATA',
+        `TemplateManager: Failed to load template '${templateId}': ${err.message}`,
       )
     }
   }
@@ -96,7 +87,10 @@ export class TemplateManager {
 
     const template = this.templates.get(templateId)
     if (!template) {
-      throw new TemplateError(`Template not found: ${templateId}`, templateId)
+      throw providerError(
+        'INVALID_ARGUMENT',
+        `TemplateManager: Template not found: ${templateId}`
+      )
     }
 
     if (!template.validator(data)) {
@@ -104,20 +98,19 @@ export class TemplateManager {
         template.validator.errors
           ?.map((err) => `${err.instancePath || 'root'}: ${err.message}`)
           .join(', ') || 'Unknown validation error'
-      throw new TemplateError(
-        `Template data validation failed for '${templateId}': ${errors}`,
-        templateId
+
+      throw providerError(
+        'INVALID_ARGUMENT',
+        `TemplateManager: Validation error: ${errors}`
       )
     }
 
     try {
       return template.template(data)
-    } catch (error) {
-      throw new TemplateError(
-        `Template rendering failed for '${templateId}': ${error instanceof Error ? error.message : String(error)
-        }`,
-        templateId,
-        error instanceof Error ? error : undefined
+    } catch (err) {
+      throw providerError(
+        'UNEXPECTED_STATE',
+        `TemplateManager: Template rendering failed for '${templateId}': ${err.message}`
       )
     }
   }

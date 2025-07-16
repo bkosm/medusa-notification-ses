@@ -1,21 +1,22 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { TemplateProvider, TemplateError } from './templates'
+import { TemplateProvider } from './templates'
+import { providerError } from './utils'
 
 export class LocalTemplateProvider implements TemplateProvider {
-  constructor(private directory: string) {}
+  constructor(private directory: string) { }
 
   private async checkDirectoryExists(): Promise<void> {
     try {
       const stats = await fs.stat(this.directory)
       if (!stats.isDirectory()) {
-        throw new TemplateError(`Templates path is not a directory: ${this.directory}`)
+        throw new Error(`Templates path is not a directory: ${this.directory}`)
       }
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        throw new TemplateError(`Templates directory does not exist: ${this.directory}`)
-      }
-      throw error
+    } catch (err) {
+      throw providerError(
+        'INVALID_DATA',
+        `LocalTemplateProvider: Directory error: ${err.message}`,
+      )
     }
   }
 
@@ -27,7 +28,10 @@ export class LocalTemplateProvider implements TemplateProvider {
       .map((dirent) => dirent.name)
 
     if (templateIds.length === 0) {
-      throw new TemplateError(`No template directories found in: ${this.directory}`)
+      throw providerError(
+        'INVALID_DATA',
+        `LocalTemplateProvider: No template directories found in: ${this.directory}`,
+      )
     }
 
     return templateIds
@@ -42,14 +46,10 @@ export class LocalTemplateProvider implements TemplateProvider {
       const templateContent = await fs.readFile(templatePath, 'utf-8')
       const schemaContent = await fs.readFile(schemaPath, 'utf-8')
       return { template: templateContent, schema: schemaContent }
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        throw new TemplateError(`File not found: ${error.path}`, id)
-      }
-      throw new TemplateError(
-        `Failed to read files for template '${id}': ${error.message}`,
-        id,
-        error
+    } catch (err) {
+      throw providerError(
+        'INVALID_DATA',
+        `LocalTemplateProvider: File error: ${err.message}`,
       )
     }
   }

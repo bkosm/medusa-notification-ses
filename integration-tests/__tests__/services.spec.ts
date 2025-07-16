@@ -314,7 +314,7 @@ describe("SES notification provider", () => {
                 )
 
                 await service.templateManager?.endInit()
-            }).rejects.toThrow("Templates directory does not exist: ./reserved-invalid-dir")
+            }).rejects.toThrow("SesNotificationService: LocalTemplateProvider: Directory error: ENOENT: no such file or directory, stat './reserved-invalid-dir'")
         })
 
         it("should render template from local provider", async () => {
@@ -466,7 +466,7 @@ describe("SES notification provider", () => {
                 content: {
                     subject: "Test"
                 }
-            })).rejects.toThrow(/Template data validation failed for 'welcome-email': root: must have required property 'firstName'/)
+            })).rejects.toThrow('SesNotificationService: Template rendering failed: SesNotificationService: TemplateManager: Validation error: root: must have required property \'firstName\'')
         })
     })
 
