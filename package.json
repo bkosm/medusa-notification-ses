@@ -12,18 +12,26 @@
     "access": "public"
   },
   "files": [
-    "dist",
-    "!dist/**/__tests__",
-    "!dist/**/__mocks__",
-    "!dist/**/__fixtures__"
+    "dist"
   ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./template-providers": "./dist/template-providers/index.js"
+  },
+  "typesVersions": {
+    "*": {
+      "template-providers": [
+        "./dist/template-providers/index.d.ts"
+      ]
+    }
+  },
   "engines": {
     "node": ">=22"
   },
   "author": "bkosm",
   "license": "MIT",
   "scripts": {
-    "test": "jest --passWithNoTests src",
+    "test": "jest src",
     "test:integration": "jest --detectOpenHandles --forceExit -- integration-tests/**/*.spec.ts",
     "build": "rimraf dist && tsc --build ./tsconfig.json",
     "watch": "tsc --watch",

@@ -2,11 +2,7 @@ import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import Handlebars from 'handlebars'
 import { providerError } from './utils'
-
-export interface TemplateProvider {
-  listIds(): Promise<string[]>
-  getFiles(id: string): Promise<{ template: string; schema: string }>
-}
+import { TemplateProvider } from './template-providers'
 
 export interface TemplateMetadata {
   id: string

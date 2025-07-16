@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeEach } from '@jest/globals'
 import path from 'path'
-import { TemplateManager, LocalTemplateProvider } from '..'
+import { TemplateManager } from '.'
+import { LocalTemplateProvider } from './template-providers'
 
-const FIXTURES_DIR = path.join(__dirname, '../../../__fixtures__/templates')
+const FIXTURES_DIR = path.join(__dirname, '../../__fixtures__/templates')
 
 describe('TemplateManager', () => {
   describe('create', () => {

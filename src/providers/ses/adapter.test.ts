@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@jest/globals'
-import { newMockTransporter } from "../../../__mocks__/mockTransporter"
-import { testService } from "../../../__fixtures__/testService"
+import { newMockTransporter } from "../../__mocks__/mockTransporter"
+import { testService } from "../../__fixtures__/testService"
 import path from 'path'
-import { LocalTemplateProvider } from '..'
+import { LocalTemplateProvider } from './template-providers'
 
 // Test the addressesToArray function indirectly through the service
 describe("SesNotificationService", () => {
@@ -63,7 +63,7 @@ describe("SesNotificationService", () => {
     })
 
     describe("template functionality", () => {
-        const FIXTURES_DIR = path.join(__dirname, '../../../__fixtures__/templates')
+        const FIXTURES_DIR = path.join(__dirname, '../../__fixtures__/templates')
 
         it("should send email with template rendering", async () => {
             const transporter = newMockTransporter()

@@ -1,5 +1,5 @@
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
-import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses'
+import { LocalTemplateProvider } from '@bkosm/medusa-notification-ses/template-providers'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
