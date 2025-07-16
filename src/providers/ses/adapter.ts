@@ -45,8 +45,9 @@ export class SesNotificationService extends AbstractNotificationProviderService 
     protected config_: SesNotificationServiceConfig
     protected logger_: Logger
     protected transporter_: Transporter<SentMessageInfo>
-    protected templateManager_: TemplateManager | null
-    protected sandboxManager_: SandboxManager | null
+    
+    templateManager: TemplateManager | null
+    sandboxManager: SandboxManager | null
 
     constructor(
         { logger }: InjectedDependencies,
@@ -60,8 +61,8 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         this.config_ = options
         this.logger_ = logger
         this.transporter_ = transporter
-        this.templateManager_ = TemplateManager.create(options.templateProvider)
-        this.sandboxManager_ = SandboxManager.create(options.sandboxConfig, sesClient)
+        this.templateManager = TemplateManager.create(options.templateProvider)
+        this.sandboxManager = SandboxManager.create(options.sandboxConfig, sesClient)
     }
 
     async send(
@@ -97,13 +98,13 @@ export class SesNotificationService extends AbstractNotificationProviderService 
 
         const { template: templateId, data } = notification
 
-        if (this.templateManager_ && templateId) {
-            if (!await this.templateManager_.hasTemplate(templateId)) {
+        if (this.templateManager && templateId) {
+            if (!await this.templateManager.hasTemplate(templateId)) {
                 throw error('INVALID_ARGUMENT', `Template '${templateId}' not found`)
             }
 
             try {
-                html = await this.templateManager_.renderTemplate(templateId, data)
+                html = await this.templateManager.renderTemplate(templateId, data)
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : 'unknown'
                 throw error('UNEXPECTED_STATE', `Template rendering failed: ${message}`)
@@ -133,8 +134,8 @@ export class SesNotificationService extends AbstractNotificationProviderService 
         }
 
         // Sandbox verification check - only verify recipient addresses
-        if (this.sandboxManager_) {
-            await this.sandboxManager_.checkAndVerifyAddresses([
+        if (this.sandboxManager) {
+            await this.sandboxManager.checkAndVerifyAddresses([
                 mailOptions.to,
                 mailOptions.cc,
                 mailOptions.bcc

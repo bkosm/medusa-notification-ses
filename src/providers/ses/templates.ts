@@ -1,6 +1,7 @@
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import Handlebars from 'handlebars'
+import { error } from './utils'
 
 export interface TemplateProvider {
   listIds(): Promise<string[]>
@@ -24,28 +25,39 @@ export class TemplateError extends Error {
 export class TemplateManager {
   private templates = new Map<string, TemplateMetadata>()
   private ajv = addFormats(new Ajv(), ['email'])
-  private initializationPromise: Promise<void> | null = null
 
-  private constructor(private provider: TemplateProvider) {}
+  private initPromise: Promise<void> | null | undefined = undefined
+
+  private constructor(private provider: TemplateProvider) { }
 
   static create(provider?: TemplateProvider): TemplateManager | null {
     if (!provider) {
       return null
     }
-    return new TemplateManager(provider)
+
+    const instance = new TemplateManager(provider)
+    instance.initPromise = instance.beginInit()
+
+    return instance
   }
 
-  private initialize(): Promise<void> {
-    if (this.initializationPromise) {
-      return this.initializationPromise
-    }
-    this.initializationPromise = this._initialize()
-    return this.initializationPromise
-  }
-
-  private async _initialize(): Promise<void> {
+  private async beginInit(): Promise<void> {
     const templateIds = await this.provider.listIds()
     await Promise.all(templateIds.map((templateId) => this.loadTemplate(templateId)))
+  }
+
+  async endInit(): Promise<void> {
+    if (this.initPromise === null) {
+      return
+    }
+
+    if (this.initPromise !== undefined) {
+      await this.initPromise
+      this.initPromise = null
+      return
+    }
+
+    error('UNEXPECTED_STATE', 'TemplateManager: could not finish initialization')
   }
 
   private async loadTemplate(templateId: string): Promise<void> {
@@ -66,8 +78,7 @@ export class TemplateManager {
       })
     } catch (error) {
       throw new TemplateError(
-        `Failed to load template '${templateId}': ${
-          error instanceof Error ? error.message : String(error)
+        `Failed to load template '${templateId}': ${error instanceof Error ? error.message : String(error)
         }`,
         templateId,
         error instanceof Error ? error : undefined
@@ -76,12 +87,13 @@ export class TemplateManager {
   }
 
   async hasTemplate(templateId: string): Promise<boolean> {
-    await this.initialize()
+    await this.endInit()
     return this.templates.has(templateId)
   }
 
   async renderTemplate(templateId: string, data: unknown): Promise<string> {
-    await this.initialize()
+    await this.endInit()
+
     const template = this.templates.get(templateId)
     if (!template) {
       throw new TemplateError(`Template not found: ${templateId}`, templateId)
@@ -102,8 +114,7 @@ export class TemplateManager {
       return template.template(data)
     } catch (error) {
       throw new TemplateError(
-        `Template rendering failed for '${templateId}': ${
-          error instanceof Error ? error.message : String(error)
+        `Template rendering failed for '${templateId}': ${error instanceof Error ? error.message : String(error)
         }`,
         templateId,
         error instanceof Error ? error : undefined
@@ -112,7 +123,7 @@ export class TemplateManager {
   }
 
   async getTemplateIds(): Promise<string[]> {
-    await this.initialize()
+    await this.endInit()
     return Array.from(this.templates.keys())
   }
 }
