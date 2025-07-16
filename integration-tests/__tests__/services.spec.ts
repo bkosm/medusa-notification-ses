@@ -301,6 +301,22 @@ describe("SES notification provider", () => {
     describe("Local Template Provider Integration", () => {
         const FIXTURES_DIR = path.join(__dirname, '../../src/__fixtures__/templates')
 
+        it('should fail fast given invalid configuration', async () => {
+            await expect(async () => {
+                const service = testService(
+                    newMockTransporter(),
+                    {
+                        from: "",
+                    },
+                    {
+                        templateProvider: new LocalTemplateProvider('./reserved-invalid-dir')
+                    }
+                )
+
+                await service.templateManager?.endInit()
+            }).rejects.toThrow("Templates directory does not exist: ./reserved-invalid-dir")
+        })
+
         it("should render template from local provider", async () => {
             const notification = testNotification()
             const transporter = newMockTransporter()
@@ -362,7 +378,7 @@ describe("SES notification provider", () => {
         beforeEach(() => {
             s3Mock.on(ListObjectsV2Command).resolves({ CommonPrefixes: [{ Prefix: S3_PREFIX + 'welcome-email/' }] })
             s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/handlebars.template.html' }).resolves({ Body: { transformToString: () => Promise.resolve('S3 Template Content: Welcome {{firstName}}!') } as StreamingBlobPayloadOutputTypes })
-            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/data.schema.json' }).resolves({ Body: { transformToString: () => Promise.resolve(JSON.stringify({ type: 'object', properties: { firstName: { type: 'string' } }, required: ['firstName'], additionalProperties: false })) } as StreamingBlobPayloadOutputTypes})
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/data.schema.json' }).resolves({ Body: { transformToString: () => Promise.resolve(JSON.stringify({ type: 'object', properties: { firstName: { type: 'string' } }, required: ['firstName'], additionalProperties: false })) } as StreamingBlobPayloadOutputTypes })
         })
 
         it("should render template from S3 provider", async () => {
@@ -427,8 +443,8 @@ describe("SES notification provider", () => {
         it("should throw error if S3 template data validation fails", async () => {
             // Mock S3 to return a template but with a schema that requires 'firstName'
             s3Mock.on(ListObjectsV2Command).resolves({ CommonPrefixes: [{ Prefix: S3_PREFIX + 'welcome-email/' }] })
-            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/handlebars.template.html' }).resolves({ Body: { transformToString: () => Promise.resolve('S3 Template Content: Welcome {{firstName}}!') }as StreamingBlobPayloadOutputTypes })
-            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/data.schema.json' }).resolves({ Body: { transformToString: () => Promise.resolve(JSON.stringify({ type: 'object', properties: { firstName: { type: 'string' } }, required: ['firstName'], additionalProperties: false })) } as StreamingBlobPayloadOutputTypes})
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/handlebars.template.html' }).resolves({ Body: { transformToString: () => Promise.resolve('S3 Template Content: Welcome {{firstName}}!') } as StreamingBlobPayloadOutputTypes })
+            s3Mock.on(GetObjectCommand, { Key: S3_PREFIX + 'welcome-email/data.schema.json' }).resolves({ Body: { transformToString: () => Promise.resolve(JSON.stringify({ type: 'object', properties: { firstName: { type: 'string' } }, required: ['firstName'], additionalProperties: false })) } as StreamingBlobPayloadOutputTypes })
 
             const notification = testNotification()
             const transporter = newMockTransporter()
