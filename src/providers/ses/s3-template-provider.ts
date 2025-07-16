@@ -56,7 +56,7 @@ export class S3TemplateProvider implements TemplateProvider {
         Key: key,
       })
       const response = await this.s3.send(command)
-      return response.Body?.transformToString() || ''
+      return response.Body!.transformToString()
     } catch (error) {
       throw new Error(`Failed to get object ${key} from S3: ${error.message}`)
     }
