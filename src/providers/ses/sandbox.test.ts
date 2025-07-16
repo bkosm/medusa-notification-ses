@@ -2,7 +2,7 @@ import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentit
 import { MedusaError } from '@medusajs/framework/utils'
 import { mockClient } from 'aws-sdk-client-mock'
 import { describe, expect, it, beforeEach } from '@jest/globals'
-import { SandboxManager } from '..'
+import { SandboxManager } from '.'
 
 const sesMock = mockClient(SESClient)
 

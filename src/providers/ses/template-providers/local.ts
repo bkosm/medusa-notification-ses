@@ -1,7 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { TemplateProvider } from './templates'
-import { providerError } from './utils'
+import { TemplateProvider } from '.'
+import { providerError } from '../utils'
 
 export type LocalTemplateProviderOptions = {
   directory: string

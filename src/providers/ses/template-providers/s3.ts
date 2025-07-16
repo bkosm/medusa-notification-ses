@@ -1,6 +1,6 @@
 import { S3Client, ListObjectsV2Command, GetObjectCommand, S3ClientConfig } from '@aws-sdk/client-s3'
-import { TemplateProvider } from './templates'
-import { providerError } from './utils'
+import { TemplateProvider } from '.'
+import { providerError } from '../utils'
 
 export type S3TemplateProviderOptions = {
   clientConfig?: S3ClientConfig

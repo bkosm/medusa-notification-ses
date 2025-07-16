@@ -18,10 +18,9 @@
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "noImplicitThis": true,
-    "allowJs": true,
     "skipLibCheck": true,
     "incremental": false
   },
   "include": ["${configDir}/src"],
-  "exclude": ["${configDir}/dist", "${configDir}/node_modules", "${configDir}/src/**/__tests__/**/*", "${configDir}/src/**/__mocks__/**/*", "${configDir}/src/**/__fixtures__/**/*"]
+  "exclude": ["${configDir}/src/**/*.test.*", "${configDir}/src/**/__mocks__", "${configDir}/src/**/__fixtures__"]
 }

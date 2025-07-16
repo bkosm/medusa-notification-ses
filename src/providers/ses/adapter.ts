@@ -12,9 +12,10 @@ import type { Transporter, SendMailOptions } from "nodemailer"
 import type { Attachment as NodemailerAttachment } from "nodemailer/lib/mailer"
 import type { SentMessageInfo } from "nodemailer/lib/ses-transport"
 
-import { TemplateManager, TemplateProvider } from "./templates"
+import { TemplateManager } from "./templates"
 import { SandboxManager, SandboxConfig } from "./sandbox"
 import { addressesToArray, providerError } from "./utils"
+import { TemplateProvider } from "./template-providers"
 
 export type InjectedDependencies = {
     logger: Logger
