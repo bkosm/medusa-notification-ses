@@ -1,16 +1,16 @@
 import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand } from '@aws-sdk/client-ses'
-import { providerError } from './utils'
+import { providerError, AddressLike, addressesToArray } from './utils'
 
 // Presence of object enables sandbox mode
-export interface SandboxConfig {
+export type SandboxConfig = {
   verifyOnEachSend?: boolean
 }
 
 export class SandboxManager {
-  private verifiedAddresses = new Map<string, boolean>()
-  private pendingVerifications = new Set<string>()
+  verifiedAddresses = new Map<string, boolean>()
+  pendingVerifications = new Set<string>()
 
-  constructor(private sesClient: SESClient, private verifyOnEachSend: boolean = false) {}
+  constructor(public sesClient: SESClient, public verifyOnEachSend: boolean = false) {}
 
   static create(config?: SandboxConfig, sesClient?: SESClient): SandboxManager | null {
     if (!config || !sesClient) {
@@ -20,18 +20,8 @@ export class SandboxManager {
     return new SandboxManager(sesClient, config.verifyOnEachSend ?? false)
   }
 
-  async checkAndVerifyAddresses(addresses: any[]): Promise<void> {
-    // Extract email addresses from mixed types and deduplicate
-    const emailAddresses = addresses
-      .filter(addr => addr != null)
-      .flatMap(addr => {
-        if (typeof addr === 'string') return [addr]
-        if (Array.isArray(addr)) return addr.map(a => typeof a === 'string' ? a : a.address)
-        if (typeof addr === 'object' && addr.address) return [addr.address]
-        return []
-      })
-    
-    const uniqueAddresses = [...new Set(emailAddresses)]
+  async checkAndVerifyAddresses(addresses: AddressLike[]): Promise<void> {
+    const uniqueAddresses = [...new Set(addressesToArray(addresses))]
     
     if (uniqueAddresses.length === 0) {
       return
@@ -89,12 +79,12 @@ export class SandboxManager {
     )
   }
 
-  private async getVerificationStatus(addresses: string[]): Promise<Map<string, boolean>> {
+  async getVerificationStatus(addresses: string[]): Promise<Map<string, boolean>> {
     const statusMap = new Map<string, boolean>()
     
     try {
       // SES API allows max 100 identities per call
-      const chunks = this.chunkArray(addresses, 100)
+      const chunks = chunkArray(addresses, 100)
       
       for (const chunk of chunks) {
         const command = new GetIdentityVerificationAttributesCommand({
@@ -119,7 +109,7 @@ export class SandboxManager {
     return statusMap
   }
 
-  private async startVerification(address: string): Promise<void> {
+  async startVerification(address: string): Promise<void> {
     try {
       const command = new VerifyEmailIdentityCommand({
         EmailAddress: address
@@ -133,15 +123,6 @@ export class SandboxManager {
     }
   }
 
-  private chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = []
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size))
-    }
-    return chunks
-  }
-
-  // Test utilities
   isAddressCached(address: string): boolean {
     return this.verifiedAddresses.has(address)
   }
@@ -154,4 +135,13 @@ export class SandboxManager {
     this.verifiedAddresses.clear()
     this.pendingVerifications.clear()
   }
+}
+
+
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size))
+  }
+  return chunks
 }

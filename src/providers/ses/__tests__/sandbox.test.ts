@@ -1,8 +1,8 @@
 import { SESClient, GetIdentityVerificationAttributesCommand, VerifyEmailIdentityCommand, GetIdentityVerificationAttributesCommandInput } from '@aws-sdk/client-ses'
 import { MedusaError } from '@medusajs/framework/utils'
 import { mockClient } from 'aws-sdk-client-mock'
-import { SandboxManager, SandboxError } from '../sandbox'
 import { describe, expect, it, beforeEach } from '@jest/globals'
+import { SandboxManager } from '..'
 
 const sesMock = mockClient(SESClient)
 
@@ -134,7 +134,7 @@ describe('SandboxManager', () => {
       sesMock.on(GetIdentityVerificationAttributesCommand).rejects(new Error('SES API Error'))
 
       await expect(manager.checkAndVerifyAddresses(['error@example.com']))
-        .rejects.toThrow(SandboxError)
+        .rejects.toThrow('SesNotificationService: SandboxManager: Failed to check email verification status: SES API Error')
     })
 
     it('should chunk large address lists', async () => {

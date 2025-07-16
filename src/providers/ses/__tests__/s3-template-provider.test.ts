@@ -3,7 +3,7 @@ import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/clien
 import type { StreamingBlobPayloadOutputTypes } from '@smithy/types'
 import { mockClient } from 'aws-sdk-client-mock'
 
-import { S3TemplateProvider } from '../s3-template-provider'
+import { S3TemplateProvider } from '..'
 
 // Mock the S3Client using aws-sdk-client-mock
 const s3Mock = mockClient(S3Client)

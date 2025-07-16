@@ -6,8 +6,7 @@ import { GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/clien
 import { mockClient } from 'aws-sdk-client-mock'
 import { MedusaError } from '@medusajs/framework/utils'
 import path from 'path'
-import { LocalTemplateProvider } from '../../src/providers/ses/local-template-provider'
-import { S3TemplateProvider } from '../../src/providers/ses/s3-template-provider'
+import { LocalTemplateProvider, S3TemplateProvider } from '../../src/providers/ses'
 import type { StreamingBlobPayloadOutputTypes } from '@smithy/types'
 
 const sesMock = mockClient(SESClient)
