@@ -1,3 +1,25 @@
+# [1.1.0](https://github.com/bkosm/medusa-notification-ses/compare/v1.0.1...v1.1.0) (2025-07-16)
+
+
+### Bug Fixes
+
+* *: better error handling in templates ([e734380](https://github.com/bkosm/medusa-notification-ses/commit/e734380c4c3fb741a86f85ef1ce5b266678d6db3))
+* adapter: tidy ([b76a673](https://github.com/bkosm/medusa-notification-ses/commit/b76a673ca72a6ccc37b93e828e771efe409a6e8a))
+* docs: one more update ([ad1c5be](https://github.com/bkosm/medusa-notification-ses/commit/ad1c5beccb1f9dd958a67ec9914745b72a363fb5))
+* docs: update once more ([d558e5b](https://github.com/bkosm/medusa-notification-ses/commit/d558e5b0555725701f2c77a374098ee8ddf3d5a4))
+* s3: throw on undefined response body ([422d45b](https://github.com/bkosm/medusa-notification-ses/commit/422d45baca147f8beb10a2d0e96f95183d753141))
+* s3templates: cleanup the interface ([dfc362b](https://github.com/bkosm/medusa-notification-ses/commit/dfc362b4ef297d1c29dc6e896c79fe9e7f574747))
+* sandbox: cleanup ([3f5a60a](https://github.com/bkosm/medusa-notification-ses/commit/3f5a60a83dc5cca970ccc4d993661217920799c2))
+* update documentation ([9a2fa33](https://github.com/bkosm/medusa-notification-ses/commit/9a2fa33f0d0677b276c5b98816b1e5746c2f23c3))
+
+
+### Features
+
+* *: rearrange template providers into subpackage ([d4274e0](https://github.com/bkosm/medusa-notification-ses/commit/d4274e0cf0eea5fcb06ce5973699f63d50b31d9e))
+* expose everything by default ([580a294](https://github.com/bkosm/medusa-notification-ses/commit/580a294422399cecfb916cbd2d8aece0ef3447d9))
+* implement an s3 provider ([03f088c](https://github.com/bkosm/medusa-notification-ses/commit/03f088ce823230e24aa45d7a30d32cdee3f9f588))
+* templates: init time validation of config ([b89404f](https://github.com/bkosm/medusa-notification-ses/commit/b89404f85fe15be2b57e2a745e3aa0ff1e89abe9))
+
 ## [1.0.1](https://github.com/bkosm/medusa-notification-ses/compare/v1.0.0...v1.0.1) (2025-07-15)
 
 
