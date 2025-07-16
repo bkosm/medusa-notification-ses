@@ -27,9 +27,9 @@ module.exports = defineConfig({
               nodemailerConfig: {
                 from: 'no-reply@commerce.itnsh.it'
               },
-              templateProvider: new LocalTemplateProvider(
-                `${__dirname}/src/emails`
-              ),
+              templateProvider: new LocalTemplateProvider({
+                directory: `${__dirname}/src/emails`
+              }),
               sandboxConfig: {},
             }
           },
