@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/bkosm/medusa-notification-ses/compare/v1.1.0...v1.2.0) (2025-08-12)
+
+
+### Bug Fixes
+
+* kiro: initialize repository ([912b47e](https://github.com/bkosm/medusa-notification-ses/commit/912b47e70208148c29096f29026bdc225f076a89))
+
+
+### Features
+
+* ci: convert Claude workflows to manual triggers ([7a54e51](https://github.com/bkosm/medusa-notification-ses/commit/7a54e516b9b1bc1dae20f77b9b2888a45ac2fdda))
+
 # [1.1.0](https://github.com/bkosm/medusa-notification-ses/compare/v1.0.1...v1.1.0) (2025-07-16)
 
 
